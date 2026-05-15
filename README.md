@@ -35,7 +35,8 @@ Claude-Code/
 │
 ├── hooks/
 │   └── on-stop.sh                   # uruchamiany automatycznie po każdym zakończeniu odpowiedzi Claude
-│                                    # wypisuje ścieżkę ostatniego raportu z folderu reports/
+│                                    # wysyła natywne powiadomienie macOS (tytuł + podtytuł + nazwa pliku)
+│                                    # oraz wypisuje ścieżkę raportu w terminalu
 │
 ├── examples/
 │   ├── hooks/                       # ćwiczenia: pisanie własnych skryptów hooków, blokowanie operacji
@@ -55,4 +56,4 @@ Claude-Code/
 2. `settings.json` rejestruje serwer MCP Playwright → Claude ma dostęp do przeglądarki
 3. Wpisujesz `/seo-audit` → Claude dostaje instrukcje z `.claude/commands/seo-audit.md`
 4. Claude otwiera `$AUDIT_URL` przez Playwright → czyta DOM, sprawdza wszystkie elementy SEO
-5. Zapisuje raport do `reports/` → hook `on-stop.sh` wypisuje ścieżkę pliku
+5. Zapisuje raport do `reports/` → hook `on-stop.sh` wysyła powiadomienie macOS z nazwą pliku
