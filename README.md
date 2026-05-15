@@ -1,14 +1,21 @@
 # Claude Code — Projekt Nauki
 
-Repozytorium do nauki kluczowych funkcjonalności Claude Code.
+Repozytorium do nauki Claude Code. Konkretny cel: **audyt SEO https://ntfy.pl/** z użyciem MCP (Playwright) do kontroli przeglądarki Chrome.
 
 ## Struktura
 
 | Ścieżka | Do czego służy |
 |---------|----------------|
-| `CLAUDE.md` | Instrukcje dla Claude wczytywane automatycznie na początku każdej sesji. Tu trzymasz kontekst projektu, konwencje i skróty. |
-| `.claude/settings.json` | Konfiguracja sesji: uprawnienia (allow/deny), rejestracja hooków, zmienne środowiskowe. |
-| `.claude/commands/` | Własne komendy slash. Każdy plik `.md` staje się komendą `/nazwa` dostępną w sesji. |
+| `CLAUDE.md` | Instrukcje dla Claude wczytywane automatycznie na początku każdej sesji. |
+| `.claude/settings.json` | Konfiguracja: MCP serwer Playwright, uprawnienia, hooki, zmienna `AUDIT_URL`. |
+| `.claude/commands/` | Własne komendy slash — `/seo-audit` uruchamia pełny audyt SEO. |
 | `docs/` | Notatki z nauki — jeden plik Markdown na temat. |
-| `hooks/` | Skrypty shell uruchamiane przez Claude Code przy zdarzeniach (PreToolUse, PostToolUse, Stop…). |
-| `examples/` | Ćwiczenia pogrupowane w podkatalogi: `hooks/`, `tool-use/`, `agents/`, `memory/`. |
+| `hooks/` | Skrypty hooków — `on-stop.sh` wypisuje ścieżkę raportu po zakończeniu sesji. |
+| `examples/` | Ćwiczenia: `hooks/`, `tool-use/`, `agents/`, `memory/`. |
+| `reports/` | Wygenerowane raporty SEO w formacie Markdown. |
+
+## Szybki start
+
+```
+/seo-audit
+```

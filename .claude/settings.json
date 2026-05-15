@@ -1,8 +1,25 @@
 {
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  },
   "permissions": {
     "allow": [],
     "deny": []
   },
-  "hooks": {},
-  "env": {}
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "hooks/on-stop.sh" }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "AUDIT_URL": "https://ntfy.pl/"
+  }
 }
