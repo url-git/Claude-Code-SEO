@@ -60,6 +60,70 @@ Claude-Code/
 
 ---
 
+## Własne komendy slash — jak działa `/seo-audit`
+
+### Skąd Claude wie, że `/seo-audit` istnieje?
+
+Claude Code automatycznie skanuje folder `.claude/commands/` w katalogu projektu przy starcie sesji. Każdy plik `.md` znaleziony w tym folderze staje się dostępną komendą slash — nazwa pliku (bez rozszerzenia) to nazwa komendy.
+
+```
+.claude/
+└── commands/
+    └── seo-audit.md   →   /seo-audit
+    └── summarize.md   →   /summarize
+```
+
+Żeby stworzyć własną komendę `/cokolwiek`, wystarczy umieścić plik `cokolwiek.md` w `.claude/commands/`. Nie trzeba nigdzie rejestrować ani restartować — Claude widzi plik od razu w nowej sesji.
+
+### Co zawiera plik komendy?
+
+Plik `seo-audit.md` to zwykły Markdown z opcjonalnym frontmatter YAML na górze:
+
+```markdown
+---
+name: seo-audit
+description: When the user wants to audit...
+---
+
+# SEO Audit
+
+Tutaj właściwe instrukcje dla Claude — co ma zrobić,
+krok po kroku, jakich narzędzi użyć, jak zapisać wynik.
+```
+
+- **`name`** — wyświetlana nazwa (opcjonalne, domyślnie nazwa pliku)
+- **`description`** — Claude używa tego opisu, żeby rozpoznać intencję użytkownika i zaproponować komendę nawet bez `/` (np. gdy piszesz „zrób audyt SEO")
+- **Treść** — to są dosłowne instrukcje, które Claude dostaje jako kontekst po wpisaniu komendy
+
+### Zmienne środowiskowe w komendzie
+
+W treści pliku możesz używać zmiennych z `settings.json`. W `seo-audit.md` jest np.:
+
+```
+Audytowana strona: $AUDIT_URL
+```
+
+`$AUDIT_URL` pochodzi z sekcji `env` w `.claude/settings.json`:
+
+```json
+"env": {
+  "AUDIT_URL": "https://ntfy.pl/"
+}
+```
+
+Żeby audytować inną stronę, wystarczy zmienić wartość `AUDIT_URL` w `settings.json` — bez edytowania samej komendy.
+
+### Zasięg komend — projekt vs. globalny
+
+| Lokalizacja pliku | Widoczność |
+|-------------------|-----------|
+| `.claude/commands/` (w projekcie) | tylko w tym projekcie |
+| `~/.claude/commands/` (katalog domowy) | we wszystkich projektach |
+
+Komendy projektowe nadpisują globalne, jeśli mają tę samą nazwę.
+
+---
+
 ## MCP i Playwright — jak to naprawdę działa
 
 ### Co to jest MCP?
