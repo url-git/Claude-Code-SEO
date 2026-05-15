@@ -2,9 +2,5 @@
 *.log
 node_modules/
 
-# Puste katalogi robocze — śledzone przez git, zawartość ignorowana
+# Katalog roboczy z notatkami — zawartość ignorowana
 docs/*
-examples/hooks/*
-examples/tool-use/*
-examples/agents/*
-examples/memory/*
