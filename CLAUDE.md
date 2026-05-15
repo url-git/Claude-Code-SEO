@@ -12,7 +12,7 @@ Ten projekt służy do nauki kluczowych funkcjonalności Claude Code poprzez kon
 | `.claude/settings.json` | Konfiguracja sesji: MCP serwer Playwright, uprawnienia, hooki, zmienna `AUDIT_URL`. |
 | `.claude/commands/` | Własne komendy slash. `/seo-audit` uruchamia pełny audyt SEO. |
 | `docs/` | Notatki z nauki — jeden plik Markdown na temat. |
-| `hooks/` | Skrypty hooków. `on-stop.sh` wypisuje ścieżkę raportu po zakończeniu sesji. |
+| `hooks/` | Skrypty hooków. `on-git-push.sh` wysyła powiadomienie macOS gdy Claude wykona `git push`. |
 | `examples/` | Ćwiczenia: `hooks/`, `tool-use/`, `agents/`, `memory/`. |
 | `reports/` | Wygenerowane raporty SEO w formacie Markdown. |
 
@@ -30,7 +30,7 @@ Claude otworzy https://ntfy.pl/ przez Playwright, sprawdzi wszystkie elementy SE
 
 - **MCP** — konfiguracja serwera Playwright w `settings.json`, narzędzia do kontroli przeglądarki
 - **Komendy slash** — tworzenie własnych komend w `.claude/commands/`
-- **Hooki** — zdarzenie `Stop`, rejestracja skryptu, odczyt stdout
+- **Hooki** — zdarzenie `PostToolUse` z matcherem `Bash`, wykrywanie `git push`, powiadomienia macOS
 - **settings.json** — uprawnienia, zmienne env, MCP serwery
 - **Agenci** — równoległe audyty wielu podstron
 - **Pamięć** — porównywanie raportów między sesjami

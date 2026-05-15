@@ -10,11 +10,11 @@
     "deny": []
   },
   "hooks": {
-    "Stop": [
+    "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "hooks/on-stop.sh" }
+          { "type": "command", "command": "hooks/on-git-push.sh" }
         ]
       }
     ]
