@@ -43,6 +43,63 @@ Claude-Code/
 
 ---
 
+## Konfiguracja `settings.json` — linia po linii
+
+Plik `.claude/settings.json` to centralny punkt konfiguracji projektu. Poniżej każda linijka z wyjaśnieniem (styl JSONC — `//` to komentarze, nie są częścią prawdziwego pliku JSON):
+
+```jsonc
+{
+  // ── MCP SERVERS ──────────────────────────────────────────────────────────
+  // Rejestracja zewnętrznych serwerów MCP (Model Context Protocol).
+  // Claude Code odpala je jako osobne procesy i komunikuje się przez stdio.
+  "mcpServers": {
+    "playwright": {                          // nazwa serwera — używana wewnętrznie
+      "command": "npx",                      // program do uruchomienia serwera
+      "args": ["@playwright/mcp@latest"]     // pakiet MCP dla Playwright (zawsze najnowszy)
+                                             // dodaj "--headed" żeby widzieć okno przeglądarki
+    }
+  },
+
+  // ── PERMISSIONS ──────────────────────────────────────────────────────────
+  // Kontrola nad tym, o co Claude Code pyta użytkownika przed wykonaniem akcji.
+  "permissions": {
+    "allow": [
+      // Wzorce komend Bash, które NIE wymagają potwierdzenia użytkownika.
+      // Format: Bash(wzorzec) — gwiazdka (*) to wildcard dla dowolnych argumentów.
+      "Bash(curl -sI *)",        // HEAD requesty HTTP (np. sprawdzanie nagłówków strony)
+      "Bash(curl -s https://*)"  // GET requesty HTTPS (np. pobieranie sitemap, API GitHub)
+    ],
+    "deny": []  // komendy całkowicie zablokowane — tu: brak, nic nie blokujemy jawnie
+  },
+
+  // ── HOOKS ────────────────────────────────────────────────────────────────
+  // Skrypty uruchamiane automatycznie w odpowiedzi na zdarzenia Claude Code.
+  "hooks": {
+    "PostToolUse": [            // zdarzenie: po każdym użyciu narzędzia przez Claude
+      {
+        "matcher": "Bash",      // filtr: reaguj tylko gdy narzędziem był Bash
+        "hooks": [
+          {
+            "type": "command",                      // typ hooka: uruchom polecenie shell
+            "command": "hooks/on-git-push.sh"       // skrypt sprawdza, czy Bash wykonał git push
+                                                    // jeśli tak → wysyła natywne powiadomienie macOS
+          }
+        ]
+      }
+    ]
+  },
+
+  // ── ENV ──────────────────────────────────────────────────────────────────
+  // Zmienne środowiskowe dostępne w sesjach Claude Code i w plikach komend slash.
+  "env": {
+    "AUDIT_URL": "https://ntfy.pl/"  // URL audytowanej strony — użyj $AUDIT_URL w komendach
+                                     // zmień tę wartość, żeby audytować inną stronę
+  }
+}
+```
+
+---
+
 ## Jak to działa
 
 1. Claude Code startuje sesję → wczytuje `CLAUDE.md` i `settings.json`

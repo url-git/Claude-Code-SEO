@@ -6,7 +6,10 @@
     }
   },
   "permissions": {
-    "allow": [],
+    "allow": [
+      "Bash(curl -sI *)",
+      "Bash(curl -s https://*)"
+    ],
     "deny": []
   },
   "hooks": {
