@@ -9,6 +9,16 @@
     "allow": [],
     "deny": []
   },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "hooks/on-git-push.sh" }
+        ]
+      }
+    ]
+  },
   "env": {
     "AUDIT_URL": "https://ntfy.pl/"
   }
