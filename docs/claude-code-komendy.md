@@ -50,7 +50,7 @@
 | `/share` | Udostępnij sesję |
 | `/status` | Pokaż status bieżącej sesji i zadań |
 | `/statusline` | Skonfiguruj pasek statusu Claude Code |
-| `/summarize` | Podsumuj bieżącą sesję |
+| `/summarize` | Podsumuj bieżącą sesję — własna komenda slash z `.claude/commands/summarize.md` |
 | `/terminal-setup` | Skonfiguruj terminal dla Claude Code |
 | `/theme` | Zmień motyw kolorystyczny interfejsu |
 | `/todos` | Pokaż listę zadań (TODO) |

@@ -10,7 +10,7 @@ metadata:
 You are an expert in search engine optimization. Your goal is to identify SEO issues and provide actionable recommendations to improve organic search performance.
 
 Audytowana strona: $AUDIT_URL
-Wynik zapisz do: reports/ntfy-pl-YYYY-MM-DD.md (użyj dzisiejszej daty)
+Wynik zapisz do: reports/YYYY-MM-DD.md (użyj dzisiejszej daty; nazwę pliku wywiedź z domeny $AUDIT_URL, np. ntfy-pl-2026-05-16.md)
 
 ## Initial Assessment
 
@@ -343,10 +343,91 @@ Same format as above
 
 ---
 
-## Related Skills
+## Nauka i dalsze kroki
 
-- **ai-seo**: For optimizing content for AI search engines (AEO, GEO, LLMO)
-- **programmatic-seo**: For building SEO pages at scale
-- **site-architecture**: For page hierarchy, navigation design, and URL structure
-- **schema**: For implementing structured data
-- **analytics**: For measuring SEO performance
+Ta komenda to punkt startowy projektu nauki Claude Code. Poniżej znajdziesz tematy do opanowania wraz z wyjaśnieniem, co każdy oznacza w praktyce, i konkretnymi zadaniami do wykonania.
+
+---
+
+### Subagenci — równoległe audyty wielu podstron
+
+**Co to znaczy:** Claude Code może uruchamiać wiele niezależnych agentów jednocześnie. Każdy subagent działa w osobnym kontekście i wykonuje swoje zadanie równolegle z pozostałymi — wyniki trafiają z powrotem do agenta-orkiestratora, który je scala.
+
+**Dlaczego tu:** Zamiast audytować kolejno stronę główną, blog i dokumentację ntfy.pl, możesz uruchomić trzy agenty naraz i skrócić czas audytu trzykrotnie.
+
+**Taski:**
+- [ ] Stwórz komendę `/seo-audit-multi` w `.claude/commands/`
+- [ ] Dodaj plik `config/audit-urls.txt` z listą podstron do audytu
+- [ ] Napisz instrukcję, która odczytuje listę URL-i i uruchamia osobnego agenta dla każdego
+- [ ] Sprawdź wynik w `/agents` podczas działania — obserwuj równoległość
+- [ ] Połącz wyniki w jeden raport zbiorczy z sekcją porównawczą
+
+---
+
+### `/schedule` — automatyczny cotygodniowy audyt
+
+**Co to znaczy:** `/schedule` pozwala zlecić Claude Code wykonanie zadania w określonym czasie lub cyklicznie — bez udziału człowieka. Agent startuje „na zimno", bez historii rozmowy, więc instrukcje muszą być kompletne i samodzielne.
+
+**Dlaczego tu:** Folder `reports/` staje się archiwum historycznych audytów. Możesz śledzić trendy SEO ntfy.pl w czasie bez żadnej ręcznej pracy.
+
+**Taski:**
+- [ ] Wpisz `/schedule` i ustaw cykliczny audyt (np. co poniedziałek o 8:00)
+- [ ] Upewnij się, że `seo-audit.md` nie zakłada żadnego kontekstu z poprzednich sesji
+- [ ] Dodaj do instrukcji audytu automatyczny commit i push raportu po zapisaniu
+- [ ] Sprawdź, czy hook `on-git-push.sh` wysyła powiadomienie po automatycznym pushu
+- [ ] Porównaj dwa kolejne raporty tygodniowe — czy SEO się poprawia?
+
+---
+
+### Extended Thinking — głębsza analiza z Opus 4.7
+
+**Co to znaczy:** Extended Thinking to tryb, w którym Claude poświęca dodatkowy czas na wewnętrzne rozumowanie przed odpowiedzią. Widoczne jako blok `<thinking>`. Zamiast mechanicznie listować problemy, Claude wyciąga wnioski i priorytetyzuje je w kontekście biznesowym.
+
+**Dlaczego tu:** Standardowy model zbiera fakty SEO. Opus z thinking formułuje strategię — które problemy realnie blokują ruch, a które to drobiazgi.
+
+**Taski:**
+- [ ] Uruchom `/seo-audit` na domyślnym modelu (Sonnet) i zapisz raport
+- [ ] Przełącz model: `/model` → Opus 4.7, ustaw effort `high`
+- [ ] Uruchom ten sam audyt ponownie i porównaj oba raporty
+- [ ] Zanotuj różnice w jakości rekomendacji i czasie generowania
+- [ ] Zdecyduj, dla jakich zadań w projekcie warto używać Opusa, a kiedy Sonnet wystarczy
+
+---
+
+### Prompt Caching — szybsze i tańsze powtórne audyty
+
+**Co to znaczy:** API Anthropic może zapamiętać część kontekstu między wywołaniami i nie przetwarzać go ponownie. Instrukcje w `seo-audit.md` (350+ linii) są identyczne przy każdym uruchomieniu — to idealny kandydat do keszowania. Cache ma TTL 5 minut.
+
+**Dlaczego tu:** Wielokrotne uruchamianie audytu w jednej sesji (np. po każdej zmianie na stronie) jest nawet dwukrotnie tańsze i szybsze dzięki cache'owi.
+
+**Taski:**
+- [ ] Zapoznaj się z polem `cache_read_input_tokens` w odpowiedziach API
+- [ ] Napisz prosty skrypt Python, który wywołuje audyt przez API i loguje koszt tokenów
+- [ ] Uruchom audyt 3 razy z rzędu i porównaj `cache_read_input_tokens` między wywołaniami
+- [ ] Sprawdź, co się dzieje po 5 minutach przerwy — cache wygasa, koszt wraca do normalnego
+- [ ] Połącz obserwacje z tematem Batch API (oba dotyczą optymalizacji kosztowej)
+
+---
+
+### Batch API — asynchroniczne audyty wielu stron naraz
+
+**Co to znaczy:** Batch API pozwala wysłać wiele zapytań do Claude jednocześnie i odebrać wyniki asynchronicznie — bez czekania na każde z osobna. Kosztuje 50% mniej niż standardowe wywołania. To wywołanie zewnętrzne przez API (skrypt Python), nie wewnątrz sesji Claude Code.
+
+**Dlaczego tu:** Audyt 20 podstron ntfy.pl w jednym batchu zamiast kolejno — oszczędność czasu i pieniędzy przy skalowaniu.
+
+**Taski:**
+- [ ] Przeczytaj dokumentację Batch API na docs.anthropic.com
+- [ ] Napisz skrypt `batch-audit.py` wysyłający listę URL-i jako jeden batch
+- [ ] Odbierz wyniki i zapisz każdy jako osobny plik w `reports/`
+- [ ] Porównaj koszt batch vs. standardowe wywołania dla tej samej liczby stron
+- [ ] Zastanów się, kiedy wolisz batch (tanie, asynchroniczne) vs. subagentów (szybkie, w sesji)
+
+---
+
+## Related Skills (zewnętrzne)
+
+- **ai-seo** — optymalizacja treści pod silniki AI (AEO, GEO, LLMO)
+- **programmatic-seo** — budowanie stron SEO w skali (np. strony na każde słowo kluczowe)
+- **site-architecture** — hierarchia stron, nawigacja, struktura URL
+- **schema** — implementacja strukturyzowanych danych (JSON-LD)
+- **analytics** — mierzenie efektów SEO w Google Analytics / Search Console

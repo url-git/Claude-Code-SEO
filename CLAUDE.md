@@ -13,7 +13,6 @@ Ten projekt służy do nauki kluczowych funkcjonalności Claude Code poprzez kon
 | `.claude/commands/` | Własne komendy slash. `/seo-audit` uruchamia pełny audyt SEO. |
 | `docs/` | Notatki z nauki — jeden plik Markdown na temat. |
 | `hooks/` | Skrypty hooków. `on-git-push.sh` wysyła powiadomienie macOS gdy Claude wykona `git push`. |
-| `examples/` | Ćwiczenia: `hooks/`, `tool-use/`, `agents/`, `memory/`. |
 | `reports/` | Wygenerowane raporty SEO w formacie Markdown. |
 
 ## Jak uruchomić audyt
@@ -32,5 +31,5 @@ Claude otworzy https://ntfy.pl/ przez Playwright, sprawdzi wszystkie elementy SE
 - **Komendy slash** — tworzenie własnych komend w `.claude/commands/`
 - **Hooki** — zdarzenie `PostToolUse` z matcherem `Bash`, wykrywanie `git push`, powiadomienia macOS
 - **settings.json** — uprawnienia, zmienne env, MCP serwery
-- **Agenci** — równoległe audyty wielu podstron
-- **Pamięć** — porównywanie raportów między sesjami
+- **Agenci** — równoległe audyty wielu podstron (`/agents`, subagenci w Claude Code)
+- **Pamięć** — porównywanie raportów między sesjami (system memory w `.claude/memory/`)

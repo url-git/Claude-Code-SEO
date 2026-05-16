@@ -22,7 +22,7 @@ Claude-Code/
 │   ├── settings.json                # ← tu jest cała konfiguracja projektu:
 │   │                                #   • MCP: rejestracja serwera Playwright (npx @playwright/mcp@latest)
 │   │                                #   • env: AUDIT_URL=https://ntfy.pl/ — zmień tu, żeby audytować inną stronę
-│   │                                #   • hooks: rejestracja skryptu on-stop.sh
+│   │                                #   • hooks: rejestracja skryptu on-git-push.sh
 │   │                                #   • permissions: lista dozwolonych/blokowanych operacji
 │   │
 │   └── commands/
@@ -34,15 +34,8 @@ Claude-Code/
 ├── docs/                            # notatki z nauki — jeden plik .md na temat (uzupełniaj w trakcie)
 │
 ├── hooks/
-│   └── on-stop.sh                   # uruchamiany automatycznie po każdym zakończeniu odpowiedzi Claude
-│                                    # wysyła natywne powiadomienie macOS (tytuł + podtytuł + nazwa pliku)
-│                                    # oraz wypisuje ścieżkę raportu w terminalu
-│
-├── examples/
-│   ├── hooks/                       # ćwiczenia: pisanie własnych skryptów hooków, blokowanie operacji
-│   ├── tool-use/                    # ćwiczenia: narzędzia wbudowane i własne serwery MCP
-│   ├── agents/                      # ćwiczenia: subagenci, równoległe audyty wielu podstron
-│   └── memory/                      # ćwiczenia: porównywanie raportów między sesjami
+│   └── on-git-push.sh               # uruchamiany przez Claude Code po wywołaniu narzędzia Bash (PostToolUse)
+│                                    # wysyła natywne powiadomienie macOS gdy Claude wykona git push
 │
 └── reports/                         # wygenerowane raporty SEO w formacie Markdown
                                      # każdy audyt tworzy: ntfy-pl-YYYY-MM-DD.md
@@ -56,7 +49,7 @@ Claude-Code/
 2. `settings.json` rejestruje serwer MCP Playwright → Claude ma dostęp do przeglądarki
 3. Wpisujesz `/seo-audit` → Claude dostaje instrukcje z `.claude/commands/seo-audit.md`
 4. Claude otwiera `$AUDIT_URL` przez Playwright → czyta DOM, sprawdza wszystkie elementy SEO
-5. Zapisuje raport do `reports/` → hook `on-stop.sh` wysyła powiadomienie macOS z nazwą pliku
+5. Zapisuje raport do `reports/` → hook `on-git-push.sh` wysyła powiadomienie macOS gdy zmiany trafią na remote
 
 ---
 
