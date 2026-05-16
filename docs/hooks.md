@@ -1,8 +1,14 @@
-# Hooki w Claude Code
+# Hooki: Claude Code vs OpenCode
+
+Ten projekt był początkowo tworzony dla **Claude Code (Anthropic)**, ale obecnie działa na **OpenCode**. Oba narzędzia mają system hooków/pluginów, ale działają inaczej.
+
+---
+
+## Claude Code (Anthropic) — hooki shell
 
 Hooki to skrypty powłoki uruchamiane automatycznie przez Claude Code w reakcji na określone zdarzenia.
 
-## Dostępne zdarzenia
+### Dostępne zdarzenia
 
 | Zdarzenie | Kiedy odpala się |
 |-----------|-----------------|
@@ -11,7 +17,7 @@ Hooki to skrypty powłoki uruchamiane automatycznie przez Claude Code w reakcji 
 | `Stop` | Po każdym zakończeniu odpowiedzi Claude |
 | `Notification` | Gdy Claude generuje powiadomienie systemowe |
 
-## Konfiguracja w settings.json
+### Konfiguracja w .claude/settings.json
 
 ```json
 "hooks": {
@@ -26,41 +32,60 @@ Hooki to skrypty powłoki uruchamiane automatycznie przez Claude Code w reakcji 
 }
 ```
 
-- **matcher** — nazwa narzędzia, które ma wyzwolić hook (`Bash`, `Edit`, `Write`, `Read`, itp.). Puste `""` oznacza każde narzędzie.
-- **type** — zawsze `"command"` (uruchamia skrypt powłoki)
-- **command** — ścieżka do skryptu, relatywna względem katalogu projektu
+### Dane wejściowe hooka (stdin)
 
-## Dane wejściowe hooka (stdin)
-
-Przy zdarzeniach `PreToolUse` i `PostToolUse` Claude Code przekazuje do skryptu przez stdin JSON z informacją o wywołaniu narzędzia:
+Przy zdarzeniach `PreToolUse` i `PostToolUse` Claude Code przekazuje do skryptu przez stdin JSON:
 
 ```json
 {
   "tool_name": "Bash",
   "tool_input": {
     "command": "git push origin main"
-  },
-  "tool_response": {
-    "output": "..."
   }
 }
 ```
 
-Skrypt może odczytać te dane przez `cat` i sparsować `python3 -c "import sys,json; ..."`.
+---
 
-## Hook w tym projekcie: on-git-push.sh
+## OpenCode — pluginy JS/TS
 
-**Plik:** `hooks/on-git-push.sh`  
-**Zdarzenie:** `PostToolUse` → matcher: `Bash`  
-**Działanie:** Wysyła natywne powiadomienie macOS (`osascript`) gdy Claude wykona `git push`.
+**OpenCode nie wspiera hooków shell z `.claude/settings.json`** (GitHub issue [#12472](https://github.com/anomalyco/opencode/issues/12472)). Zamiast tego używa **pluginów JavaScript/TypeScript** w katalogu `.opencode/plugins/`.
 
-### Jak to działa krok po kroku
+### Mapowanie zdarzeń
 
-1. Claude Code kończy wywołanie narzędzia `Bash`
-2. Przekazuje JSON z komendą przez stdin do `hooks/on-git-push.sh`
-3. Skrypt parsuje JSON i sprawdza, czy komenda zawiera `git push`
-4. Jeśli tak — wyświetla powiadomienie systemowe macOS z dźwiękiem „Glass"
+| Claude Code | OpenCode |
+|-------------|----------|
+| `PreToolUse` | `tool.execute.before` |
+| `PostToolUse` | `tool.execute.after` |
+| `Stop` | `session.idle` |
+| — | `session.created`, `session.diff`, `session.error` |
+| — | `command.executed`, `file.edited` |
 
-### Dlaczego nie Stop?
+### Plugin w tym projekcie: git-push-notification
 
-Zdarzenie `Stop` odpala się po **każdej** odpowiedzi Claude — niezależnie od tego, co zrobiła. `PostToolUse` z matcherem `Bash` odpala się tylko po wywołaniu powłoki, a skrypt dodatkowo filtruje wyłącznie komendy `git push`. Dzięki temu powiadomienie przychodzi tylko wtedy, gdy coś faktycznie trafiło na zdalny serwer.
+**Plik:** `.opencode/plugins/git-push-notification.js`  
+**Zdarzenie:** `tool.execute.after` z filtrem `bash` + `git push`  
+**Działanie:** Wysyła natywne powiadomienie macOS (`osascript`) gdy OpenCode wykona `git push`.
+
+### Jak to działa
+
+1. OpenCode kończy wywołanie narzędzia (`tool.execute.after`)
+2. Plugin sprawdza, czy to `bash` i czy komenda zawiera `git push`
+3. Jeśli tak — wywołuje `osascript` przez Bun Shell API (`$`)
+
+### Tworzenie własnego pluginu
+
+```javascript
+// .opencode/plugins/moj-plugin.js
+export const MojPlugin = async ({ project, client, $, directory, worktree }) => {
+  return {
+    "tool.execute.after": async (input, output) => {
+      // input.tool — nazwa narzędzia (bash, read, write, edit)
+      // output.args — argumenty narzędzia
+      // $ — Bun Shell API do wykonywania komend
+    },
+  }
+}
+```
+
+Więcej w dokumentacji: https://opencode.ai/docs/plugins/
