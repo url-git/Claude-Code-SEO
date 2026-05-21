@@ -31,30 +31,64 @@ Główna sesja Claude Code
 
 Każdy subagent:
 - ma **odizolowany kontekst** — nie widzi rozmów pozostałych agentów
-- może używać tych samych narzędzi co główna sesja (Playwright, Bash, Read, Write)
+- może używać `Bash`, `Read`, `Write` i `WebFetch` — pod warunkiem że są na allowliście w `settings.json` (patrz Krok 1)
+- **nie ma interaktywnych promptów uprawnień** — wszystko musi być zatwierdzone z góry
+- **MCP serwery (np. Playwright) mogą się nie załadować** w jego kontekście — niezawodny fallback to `curl`
 - zapisuje swój wynik do pliku, który główna sesja potem odczytuje
 
 ---
 
-## Krok 1 — Upewnij się, że MCP Playwright działa
+## Krok 1 — Warunki wstępne (`settings.json`)
 
-Subagenci dziedziczą konfigurację MCP z `settings.json`. Sprawdź, czy serwer Playwright jest zdefiniowany:
+Subagenci dziedziczą konfigurację z `settings.json`, ale **nie zatwierdzają uprawnień interaktywnie**. Każde narzędzie, którego mają użyć, musi być na allowliście z góry — inaczej zostanie zablokowane bez możliwości zgody w trakcie pracy.
+
+### 1.1 — Serwer MCP Playwright (opcjonalnie)
+
+Jeśli chcesz, żeby subagenci próbowali renderować strony przez Playwright:
 
 ```json
 // .claude/settings.json
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
+      "command": "/Users/p/.nvm/versions/node/v24.11.0/bin/playwright-mcp"
     }
   }
 }
 ```
 
-Zweryfikuj działanie wpisując `/mcp` w sesji — powinna pojawić się pozycja `playwright` ze statusem `connected`.
+Zweryfikuj wpisując `/mcp` w sesji głównej — pozycja `playwright` powinna mieć status `connected`.
 
-> **Ważne:** Playwright MCP może nie ładować się w kontekście subagenta, nawet jeśli działa w sesji głównej. Jeśli subagent zgłasza brak narzędzi Playwright, użyj `curl` jako fallbacku do pobierania HTML.
+> **Uwaga:** Nawet z poprawną konfiguracją Playwright MCP może nie załadować się w kontekście subagenta. Zawsze planuj fallback przez `curl`.
+
+### 1.2 — Allowlista uprawnień (wymagana)
+
+Minimalna konfiguracja dla subagentów audytujących strony:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sI *)",
+      "Bash(curl -s https://*)",
+      "Bash(mkdir -p *)",
+      "WebFetch(https://ntfy.pl/*)",
+      "Write(/Users/p/Documents/dev/Claude-Code-SEO/reports/*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close"
+    ]
+  }
+}
+```
+
+Co daje każdy wpis:
+- `Bash(curl -s https://*)` — pobranie HTML przez fallback (niezawodny)
+- `Bash(mkdir -p *)` — utworzenie `reports/` jeśli nie istnieje
+- `WebFetch(https://domena/*)` — alternatywa dla `curl`, węższy zakres
+- `Write(/pełna/ścieżka/reports/*)` — zapis raportów (ścieżka musi być pełna, nie względna)
+- `mcp__playwright__*` — narzędzia Playwright MCP (jeśli się załadują)
 
 ---
 
@@ -66,13 +100,14 @@ Przed uruchomieniem równoległego audytu upewnij się, że katalog `reports/` i
 mkdir -p reports
 ```
 
-Subagenci będą zapisywać raporty do oddzielnych plików:
+Subagenci będą zapisywać raporty do oddzielnych plików, a główna sesja scala je w raport zbiorczy:
 
 ```
 reports/
-├── audit-ntfy-pl-home.md
-├── audit-ntfy-pl-rabat.md
-└── audit-ntfy-pl-longevity.md
+├── audit-home.md          # subagent 1
+├── audit-rabat.md         # subagent 2
+├── audit-longevity.md     # subagent 3
+└── audit-porownanie.md    # sesja główna (scala 1-3)
 ```
 
 ---
@@ -139,12 +174,19 @@ Po zakończeniu pracy subagentów główna sesja scala wyniki. Przykładowy form
 Żeby uruchamiać równoległy audyt jednym poleceniem, utwórz plik `.claude/commands/seo-audit-parallel.md`:
 
 ```markdown
-Wykonaj równoległy audyt SEO za pomocą subagentów dla następujących URL:
-- $AUDIT_URL (strona główna)
-- $AUDIT_URL_2
-- $AUDIT_URL_3
+Wykonaj równoległy audyt SEO trzech podstron za pomocą subagentów.
 
-[... reszta promptu jak w Kroku 3 ...]
+Uruchom trzy subagenty równolegle — każdy audytuje jedną podstronę
+zgodnie z instrukcjami z `.claude/commands/seo-audit.md`:
+
+1. $AUDIT_URL
+2. $AUDIT_URL_2
+3. $AUDIT_URL_3
+
+Każdy subagent zapisuje wynik do osobnego pliku w `reports/`
+(audit-home.md, audit-rabat.md, audit-longevity.md).
+Na końcu scal wyniki w `reports/audit-porownanie.md` z tabelą
+porównawczą kluczowych elementów SEO.
 ```
 
 Następnie w `settings.json` zdefiniuj zmienne środowiskowe:
@@ -175,28 +217,7 @@ Teraz wystarczy wpisać `/seo-audit-parallel` — adresy URL są wstrzyknięte a
 | Brak pliku wynikowego | Subagent skończył z błędem | Wejdź w `/agents`, wybierz agenta i sprawdź jego logi |
 | Raporty nadpisują się | Takie same nazwy plików | W prompcie podaj unikalne nazwy plików dla każdego subagenta |
 
-### Minimalna konfiguracja `settings.json` dla subagentów audytujących strony
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(curl -sI *)",
-      "Bash(curl -s https://*)",
-      "Bash(mkdir -p *)",
-      "WebFetch(https://ntfy.pl/*)",
-      "Write(/Users/p/Documents/dev/Claude-Code/reports/*)",
-      "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_evaluate",
-      "mcp__playwright__browser_close"
-    ]
-  }
-}
-```
-
-> **Uwaga praktyczna:** Nawet z pełną allowlistą Playwright MCP może nie być dostępny w subagentach. Najbardziej niezawodne podejście to `curl` + Python do parsowania HTML — działa zawsze gdy `Bash(curl -s https://*)` jest na allowliście.
+> **Strategia awaryjna:** Gdy subagenci wielokrotnie failują z powodu uprawnień lub braku MCP — nie restartuj ich w pętli. Szybciej przejąć pracę w sesji głównej: `curl -s url > /tmp/page.html` + parsowanie przez własny skrypt Python.
 
 ---
 
@@ -212,4 +233,9 @@ Teraz wystarczy wpisać `/seo-audit-parallel` — adresy URL są wstrzyknięte a
                                          reports/audit-porownanie.md
 ```
 
-Subagenci to najprostszy sposób na skrócenie czasu audytów wielostronicowych. Nie wymagają żadnej dodatkowej konfiguracji poza tym, co już masz — wystarczy odpowiedni prompt.
+Subagenci skracają czas audytu wielostronicowego liniowo z liczbą stron, ale **nie są darmowe konfiguracyjnie**:
+
+- Każde narzędzie musi być na allowliście w `settings.json` — brak interaktywnej zgody
+- MCP serwery (Playwright) potrafią nie załadować się w kontekście subagenta
+- Niezawodny fallback: `curl` + Python do parsowania HTML
+- Gdy subagent failuje 2× — przejdź na ręczną pracę w sesji głównej zamiast restartować
