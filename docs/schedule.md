@@ -104,14 +104,11 @@ Otworzy się kreator. Skonfiguruj:
 ### Prompt dla zaplanowanego agenta
 
 ```
-Jesteś agentem SEO działającym automatycznie. Wykonaj audyt strony https://ntfy.pl/ zgodnie z instrukcjami z .claude/commands/seo-audit.md.
-
-Po zakończeniu:
-1. Zapisz raport do reports/ z datą w nazwie pliku (format: ntfy-pl-YYYY-MM-DD.md)
-2. Wykonaj: git add reports/ && git commit -m "Automatyczny audyt SEO — [data]" && git push origin main
-
-Nie czekaj na potwierdzenie. Działaj w pełni autonomicznie.
+Wykonaj pełny audyt SEO zgodnie z instrukcjami z .claude/commands/seo-audit.md.
+Działaj autonomicznie, nie pytaj o potwierdzenie.
 ```
+
+Krótki prompt jest możliwy dlatego, że `seo-audit.md` zawiera już wszystko: URL (`$AUDIT_URL` z `settings.json`), format nazwy pliku z datą, instrukcję auto-commit i push. Jedna prawda w jednym miejscu — prompt tylko ją wywołuje.
 
 ---
 
