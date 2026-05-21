@@ -81,24 +81,18 @@ Wpisz w sesji Claude Code:
 
 ```
 Wykonaj równoległy audyt SEO trzech podstron za pomocą subagentów.
-Każdy subagent ma audytować jedną podstronę używając Playwright:
+
+Uruchom trzy subagenty równolegle — każdy audytuje jedną podstronę
+zgodnie z instrukcjami z `.claude/commands/seo-audit.md`:
 
 1. https://ntfy.pl/
 2. https://ntfy.pl/rabat
 3. https://ntfy.pl/diety-z-wyborem/longevity
 
-Każdy subagent powinien sprawdzić:
-- tag <title> i jego długość
-- meta description i jej długość
-- nagłówki H1, H2, H3
-- kanoniczny URL (canonical)
-- Open Graph (og:title, og:description, og:image)
-- czas ładowania strony
-- linki wewnętrzne i zewnętrzne (liczba)
-- tekst alternatywny obrazków (czy jest wypełniony)
-
-Każdy subagent zapisuje wynik do osobnego pliku Markdown w katalogu reports/.
-Na końcu połącz wyniki w zbiorczy raport reports/audit-porownanie.md z tabelą porównawczą.
+Każdy subagent zapisuje wynik do osobnego pliku w katalogu reports/
+(użyj unikalnych nazw, np. audit-home.md, audit-rabat.md, audit-longevity.md).
+Na końcu połącz wyniki w zbiorczy raport reports/audit-porownanie.md
+z tabelą porównawczą kluczowych elementów SEO.
 ```
 
 Claude Code automatycznie uruchomi trzy subagenty równolegle i poczeka na wyniki.
