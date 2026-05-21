@@ -1,6 +1,8 @@
-# Claude Code — Projekt Nauki
+# Claude Code SEO — Projekt Nauki
 
 Ten projekt służy do nauki kluczowych funkcjonalności Claude Code poprzez konkretny cel: **audyt SEO strony https://ntfy.pl/** przy użyciu MCP (Playwright) do kontroli przeglądarki.
+
+Folder lokalny: `~/Documents/dev/Claude-Code-SEO` | Repo: `github.com/url-git/Claude-Code-SEO`
 
 Środowisko: macOS, zsh.
 
@@ -32,4 +34,4 @@ Claude otworzy https://ntfy.pl/ przez Playwright, sprawdzi wszystkie elementy SE
 - **Hooki** — zdarzenie `PostToolUse` z matcherem `Bash`, wykrywanie `git push`, powiadomienia macOS
 - **settings.json** — uprawnienia, zmienne env, MCP serwery
 - **Agenci** — równoległe audyty wielu podstron (`/agents`, subagenci w Claude Code)
-- **Pamięć** — porównywanie raportów między sesjami (system memory w `.claude/memory/`)
+- **Pamięć** — porównywanie raportów między sesjami (system memory w `~/.claude/projects/-Users-p-Documents-dev-Claude-Code-SEO/memory/`)
