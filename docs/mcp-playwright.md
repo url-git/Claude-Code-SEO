@@ -28,39 +28,33 @@ Plik `.claude/settings.json`:
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@0.0.75"]
+      "command": "/Users/p/.nvm/versions/node/v24.11.0/bin/playwright-mcp"
     }
   }
 }
 ```
 
-### Dlaczego `@0.0.75` a nie `@latest`?
+Pakiet jest zainstalowany globalnie: `npm install -g @playwright/mcp@0.0.75`
 
-Przy tagu `@latest` `npx` nie może bezpiecznie buforować pakietu — za każdym razem gdy Claude Code startuje sesję, `npx` musi odpytać rejestr npm czy nie pojawiła się nowsza wersja. To powoduje:
+Żeby znaleźć ścieżkę binarki na swoim komputerze:
 
-1. **Opóźnienie startu** — sieciowe zapytanie do rejestru npm zajmuje czas
-2. **Ryzyko timeout** — Claude Code ma limit czasu na nawiązanie połączenia z MCP; jeśli pakiet musi być jeszcze pobrany, serwer nie zdąży się połączyć i w `/mcp` pojawia się błąd zamiast statusu `connected`
-3. **Nieoczekiwane zmiany** — `@latest` może pobrać nową wersję z innym API i zepsuć działające audyty
+```bash
+which playwright-mcp
+```
 
-Przypięcie konkretnej wersji (`@0.0.75`) rozwiązuje wszystkie trzy problemy: `npx` buforuje pakiet lokalnie po pierwszym pobraniu, każdy kolejny start jest natychmiastowy.
+### Globalna instalacja npm ≠ globalny MCP
+
+Ważne rozróżnienie: `npm install -g` instaluje binarkę systemowo, ale **nie sprawia, że MCP jest aktywny we wszystkich projektach**. Claude Code ładuje serwery MCP wyłącznie z `.claude/settings.json` danego projektu. Otwarcie innego projektu — nawet na tym samym komputerze — nie uruchomi Playwright MCP, bo tamten projekt nie ma go w swojej konfiguracji.
+
+Globalna instalacja npm to tylko sposób na szybki dostęp do binarki (żeby nie czekać na `npx`). Które projekty faktycznie korzystają z serwera — decyduje ich własny `settings.json`.
 
 ---
 
-## Dlaczego nie instalacja globalna?
+## Dlaczego bezpośrednia ścieżka, a nie `npx`?
 
-Globalna instalacja (`npm install -g @playwright/mcp`) działa technicznie, ale ma istotne wady:
+Pierwotna konfiguracja używała `npx @playwright/mcp@0.0.75`. Problem: przy starcie sesji Claude Code ma limit czasu na nawiązanie połączenia z każdym MCP. Jeśli `npx` musi w tym czasie pobrać lub zweryfikować pakiet w rejestrze npm — serwer nie zdąży się połączyć i w `/mcp` pojawia się `error` zamiast `connected`.
 
-**Problem z zasobami:**
-Globalnie zainstalowane MCP serwery są dostępne we **wszystkich** projektach Claude Code na tym komputerze. Jeśli masz 5 projektów z różnymi MCP, przy każdym starcie dowolnego projektu mogą startować wszystkie serwery — nawet jeśli dany projekt ich nie potrzebuje.
-
-**Problem z izolacją:**
-Globalna wersja pakietu jest wspólna dla wszystkich projektów. Aktualizacja pod potrzeby jednego projektu może zepsuć inny.
-
-**Problem z przenośnością:**
-Projekt przestaje być samodzielny — na innym komputerze lub w CI/CD trzeba pamiętać o osobnej instalacji globalnej.
-
-Konfiguracja w `.claude/settings.json` z `npx` i przypiętą wersją sprawia, że projekt jest **samowystarczalny**: wszystko czego potrzeba jest opisane w jednym pliku, który jest w repozytorium.
+Bezpośrednia ścieżka do binarki omija `npx` całkowicie — serwer startuje natychmiast.
 
 ---
 
@@ -72,11 +66,11 @@ Po otwarciu projektu w Claude Code wpisz:
 /mcp
 ```
 
-Powinieneś zobaczyć listę serwerów. Przy `playwright` powinien być status `connected`. Jeśli pojawia się `error` lub `playwright` nie ma go na liście:
+Przy `playwright` powinien być status `connected`. Jeśli pojawia się `error`:
 
-1. Sprawdź czy `node` i `npx` są dostępne: `! node --version`
+1. Sprawdź czy binarka istnieje: `! which playwright-mcp`
 2. Sprawdź logi MCP: w panelu `/mcp` kliknij nazwę serwera po szczegóły błędu
-3. Uruchom ręcznie: `! npx @playwright/mcp@0.0.75 --help` — jeśli działa, problem jest z konfiguracją `settings.json`
+3. Uruchom ręcznie: `! playwright-mcp --help` — jeśli działa, problem jest ze ścieżką w `settings.json`
 
 ---
 
@@ -84,8 +78,8 @@ Powinieneś zobaczyć listę serwerów. Przy `playwright` powinien być status `
 
 Gdy będziesz chciał zaktualizować Playwright MCP do nowszej wersji:
 
-1. Sprawdź aktualną najnowszą wersję: `! npx @playwright/mcp@latest --version`
-2. Zaktualizuj numer wersji w `.claude/settings.json`
-3. Zrestartuj sesję Claude Code — nowa wersja zostanie pobrana i zbuforowana
+1. Zainstaluj nową wersję: `! npm install -g @playwright/mcp@<nowa-wersja>`
+2. Ścieżka binarki pozostaje ta sama (`which playwright-mcp` nie zmienia się)
+3. Zrestartuj sesję Claude Code
 
 Nie aktualizuj pochopnie — nowe wersje MCP mogą zmieniać nazwy narzędzi, co wymaga aktualizacji promptów w komendach slash.
