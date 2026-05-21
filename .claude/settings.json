@@ -7,7 +7,17 @@
   "permissions": {
     "allow": [
       "Bash(curl -sI *)",
-      "Bash(curl -s https://*)"
+      "Bash(curl -s https://*)",
+      "WebFetch(https://ntfy.pl/*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_close",
+      "Bash(mkdir -p *)",
+      "Write(/Users/p/Documents/dev/Claude-Code/reports/*)"
     ],
     "deny": []
   },

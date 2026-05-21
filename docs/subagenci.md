@@ -54,6 +54,8 @@ Subagenci dziedziczą konfigurację MCP z `settings.json`. Sprawdź, czy serwer 
 
 Zweryfikuj działanie wpisując `/mcp` w sesji — powinna pojawić się pozycja `playwright` ze statusem `connected`.
 
+> **Ważne:** Playwright MCP może nie ładować się w kontekście subagenta, nawet jeśli działa w sesji głównej. Jeśli subagent zgłasza brak narzędzi Playwright, użyj `curl` jako fallbacku do pobierania HTML.
+
 ---
 
 ## Krok 2 — Struktura katalogów dla raportów
@@ -165,10 +167,36 @@ Teraz wystarczy wpisać `/seo-audit-parallel` — adresy URL są wstrzyknięte a
 
 | Problem | Przyczyna | Rozwiązanie |
 |---------|-----------|-------------|
-| Subagent nie widzi Playwright | MCP nie zainicjowany w subsesji | Sprawdź `/mcp` — upewnij się, że `playwright` ma status `connected` |
+| Subagent nie widzi Playwright | MCP nie ładuje się w kontekście subagenta | Użyj `curl -s https://...` jako fallbacku; Playwright działa pewnie tylko w sesji głównej |
+| Subagent nie może zapisać pliku | Brak `Write` w `permissions.allow` | Dodaj `"Write(/ścieżka/do/reports/*)"` do `settings.json` |
+| `WebFetch` zablokowany mimo allowlisty | Subagent nie zatwierdza interaktywnie | Dodaj `"WebFetch(https://domena/*)"` do `permissions.allow` w `settings.json` |
+| `Bash(curl -s https://...)` odrzucony | Wzorzec w allowliście nie pasuje dokładnie | Upewnij się, że wpis to `"Bash(curl -s https://*)"`  — sprawdź spacje i znaki |
 | Subagent zawiesza się | Strona nie ładuje się w limicie czasu | Dodaj timeout w prompcie: "poczekaj max 15 sekund na załadowanie" |
 | Brak pliku wynikowego | Subagent skończył z błędem | Wejdź w `/agents`, wybierz agenta i sprawdź jego logi |
 | Raporty nadpisują się | Takie same nazwy plików | W prompcie podaj unikalne nazwy plików dla każdego subagenta |
+
+### Minimalna konfiguracja `settings.json` dla subagentów audytujących strony
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sI *)",
+      "Bash(curl -s https://*)",
+      "Bash(mkdir -p *)",
+      "WebFetch(https://ntfy.pl/*)",
+      "Write(/Users/p/Documents/dev/Claude-Code/reports/*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close"
+    ]
+  }
+}
+```
+
+> **Uwaga praktyczna:** Nawet z pełną allowlistą Playwright MCP może nie być dostępny w subagentach. Najbardziej niezawodne podejście to `curl` + Python do parsowania HTML — działa zawsze gdy `Bash(curl -s https://*)` jest na allowliście.
 
 ---
 
