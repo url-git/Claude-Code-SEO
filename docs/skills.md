@@ -2,7 +2,7 @@
 
 ## Czym są skile?
 
-Skill (skil) to plik Markdown z nagłówkiem YAML, który definiuje własną komendę slash w Claude Code. Tworzysz plik w `.claude/skills/nazwa.md` i od razu możesz wywołać `/nazwa` w sesji — Claude automatycznie wczyta jego zawartość jako instrukcję.
+Skill (skil) to katalog z plikiem `SKILL.md` wewnątrz, który definiuje własną komendę slash w Claude Code. Tworzysz katalog w `.claude/skills/nazwa/` z plikiem `SKILL.md` i od razu możesz wywołać `/nazwa` w sesji — Claude automatycznie wczyta jego zawartość jako instrukcję.
 
 Skile rozwiązują konkretny problem: zamiast opisywać Claude'owi za każdym razem jak przeprowadzić audyt SEO, zapisujesz to raz i wywołujesz jedną komendą.
 
@@ -24,19 +24,14 @@ model: haiku
 # Treść instrukcji dla Claude...
 ```
 
-### Pola obowiązkowe
+Żadne pole frontmattera nie jest obowiązkowe — nazwę komendy Claude bierze z nazwy katalogu. `description` jest jednak mocno zalecany.
 
-| Pole | Opis |
-|------|------|
-| `name` | Nazwa komendy slash (bez ukośnika). Np. `audit-subpages` → `/audit-subpages` |
-| `description` | Opis używany przez Claude do dopasowania skila do zapytania użytkownika |
-
-### Pola opcjonalne
-
-| Pole | Opis |
-|------|------|
-| `allowed-tools` | Lista narzędzi, których Claude może używać gdy skil jest aktywny |
-| `model` | Model Claude dla tego skila (`haiku`, `sonnet`, `opus`) |
+| Pole | Wymagany | Opis |
+|------|----------|------|
+| `name` | Nie | Nadpisuje nazwę katalogu jako nazwę komendy. Jeśli pominięty, używana jest nazwa katalogu. |
+| `description` | Zalecany | Opis używany przez Claude do automatycznego dopasowania skila do zapytania |
+| `allowed-tools` | Nie | Narzędzia, których Claude może używać bez pytania o zgodę gdy skil jest aktywny |
+| `model` | Nie | Model Claude dla tego skila (`haiku`, `sonnet`, `opus`) |
 
 ---
 
@@ -127,7 +122,7 @@ Gdy skil rośnie powyżej ~500 linii, rozbij go na wiele plików:
 
 ### Zastosowanie w tym projekcie
 
-`audit-subpages.md` oryginalnie miał wbudowany cały prompt subagenta (42 linie JSON-a i instrukcji). Po refaktorze:
+`audit-subpages/SKILL.md` oryginalnie miał wbudowany cały prompt subagenta (42 linie JSON-a i instrukcji). Po refaktorze:
 
 - `audit-subpages/SKILL.md` odwołuje się do: `references/subagent-audit-prompt.md`
 - Prompt jest ładowany tylko w Kroku 2, gdy faktycznie uruchamiane są subagenty
