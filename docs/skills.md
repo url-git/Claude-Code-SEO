@@ -2,7 +2,7 @@
 
 ## Czym są skile?
 
-Skill (skil) to katalog z plikiem `SKILL.md` wewnątrz, który definiuje własną komendę slash w Claude Code. Tworzysz katalog w `.claude/skills/nazwa/` z plikiem `SKILL.md` i od razu możesz wywołać `/nazwa` w sesji — Claude automatycznie wczyta jego zawartość jako instrukcję.
+Skill (skil) to plik `SKILL.md` w dedykowanym katalogu, który definiuje własną komendę slash w Claude Code. Tworzysz plik `.claude/skills/nazwa/SKILL.md` i od razu możesz wywołać `/nazwa` w sesji — Claude automatycznie wczyta jego zawartość jako instrukcję.
 
 Skile rozwiązują konkretny problem: zamiast opisywać Claude'owi za każdym razem jak przeprowadzić audyt SEO, zapisujesz to raz i wywołujesz jedną komendą.
 
