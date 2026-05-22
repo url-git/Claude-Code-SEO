@@ -12,6 +12,19 @@
 | Uruchamia się o konkretnej godzinie | ❌ | ❌ | ✅ |
 | Analogia | rozmowa | pętla w rozmowie | cron job |
 
+### Przykłady komend `/loop`
+
+| Komenda | Co robi |
+|---------|---------|
+| `/loop 5m /seo-audit` | Co 5 minut uruchamia pełny audyt SEO — dopóki nie wciśniesz Ctrl+C |
+| `/loop 1m sprawdź, czy strona ntfy.pl odpowiada` | Co minutę pinguje stronę i informuje, jeśli nie odpowiada |
+| `/loop 30s pokaż ostatnią linię pliku reports/ntfy-pl-2026-05-22.md` | Co 30 sekund odświeża podgląd pliku — przydatne podczas pisania raportu |
+| `/loop` | Tryb autonomiczny bez interwału — Claude sam decyduje, co robić i kiedy sprawdzić ponownie |
+
+Interwał podajesz w sekundach (`30s`), minutach (`5m`) lub godzinach (`1h`). Bez interwału Claude sam dobiera tempo. Pętla działa tylko w otwartej sesji — zamknięcie terminala ją przerywa.
+
+---
+
 Kluczowa różnica: **zaplanowany agent startuje „na zimno"** — nie ma żadnego kontekstu z poprzednich sesji. Instrukcje w komendzie muszą być kompletne i samodzielne.
 
 ---
