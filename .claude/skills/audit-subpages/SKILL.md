@@ -32,7 +32,7 @@ Wydrukuj: "Uruchamiam audyt dla [N] podstron równolegle: [lista URL-i]"
 
 Uruchom jednego subagenta na każdy URL. Wszyscy agenci startują **jednocześnie** (w jednym wywołaniu Agent tool z wieloma blokami).
 
-Prompt dla każdego subagenta znajduje się w `.claude/skills/references/subagent-audit-prompt.md` — wczytaj go i podstaw konkretny URL za `[URL]`.
+Prompt dla każdego subagenta znajduje się w `references/subagent-audit-prompt.md` — wczytaj go i podstaw konkretny URL za `[URL]`.
 
 ## Krok 3 — Zbierz wyniki
 

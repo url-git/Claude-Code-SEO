@@ -115,9 +115,10 @@ Gdy skil rośnie powyżej ~500 linii, rozbij go na wiele plików:
 
 ```
 .claude/skills/
-├── audit-subpages.md        ← główny plik (max ~500 linii)
-└── references/
-    └── subagent-audit-prompt.md  ← ładowany tylko gdy potrzebny
+└── audit-subpages/
+    ├── SKILL.md                      ← główny plik (max ~500 linii)
+    └── references/
+        └── subagent-audit-prompt.md  ← ładowany tylko gdy potrzebny
 ```
 
 **Dlaczego to ważne:** Claude ładuje pliki pomocnicze *tylko gdy są potrzebne*, nie wszystko naraz. Dzięki temu okno kontekstu nie jest zapychane instrukcjami, które w danym momencie nie są używane.
@@ -128,7 +129,7 @@ Gdy skil rośnie powyżej ~500 linii, rozbij go na wiele plików:
 
 `audit-subpages.md` oryginalnie miał wbudowany cały prompt subagenta (42 linie JSON-a i instrukcji). Po refaktorze:
 
-- `audit-subpages.md` odwołuje się do: `references/subagent-audit-prompt.md`
+- `audit-subpages/SKILL.md` odwołuje się do: `references/subagent-audit-prompt.md`
 - Prompt jest ładowany tylko w Kroku 2, gdy faktycznie uruchamiane są subagenty
 - Główny plik pozostaje czytelny i krótki
 
@@ -138,10 +139,12 @@ Gdy skil rośnie powyżej ~500 linii, rozbij go na wiele plików:
 
 ```
 .claude/skills/
-├── audit-subpages.md          # /audit-subpages — równoległy audyt podstron
-├── compare-reports.md         # /compare-reports — porównanie dwóch raportów SEO
-└── references/
-    └── subagent-audit-prompt.md  # prompt przekazywany subagentom audytu
+├── audit-subpages/
+│   ├── SKILL.md                      # /audit-subpages — równoległy audyt podstron
+│   └── references/
+│       └── subagent-audit-prompt.md  # prompt przekazywany subagentom audytu
+└── compare-reports/
+    └── SKILL.md                      # /compare-reports — porównanie dwóch raportów SEO
 ```
 
 | Komenda | Model | Narzędzia | Zastosowanie |
