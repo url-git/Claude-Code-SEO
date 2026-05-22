@@ -1,5 +1,19 @@
 # Prompt Caching — szybsze i tańsze powtórne audyty
 
+> ## Kiedy ta wiedza jest Ci potrzebna?
+>
+> | Scenariusz | Czy musisz konfigurować cache? |
+> |---|---|
+> | Używasz Claude Code w terminalu | ❌ Nie — działa automatycznie |
+> | Piszesz własne komendy slash (`/seo-audit`) | ❌ Nie — Claude Code kesuje za Ciebie |
+> | Piszesz skrypt Python z `anthropic.Anthropic()` | ✅ Tak — dodaj `cache_control` ręcznie |
+> | Stawiasz własną usługę (Cloud Run, Cloud Functions, Lambda) | ✅ Tak — to decyzja architektoniczna i kosztowa |
+> | Robisz Batch API dla wielu audytów | ✅ Tak — cache + batch = największe oszczędności |
+>
+> Innymi słowy: w codziennej pracy z Claude Code możesz traktować to jako ciekawostkę. Gdy zaczniesz pisać własne aplikacje wołające API Anthropica — to przestaje być teoria.
+
+---
+
 Prompt Caching to mechanizm, w którym API Anthropica zapamiętuje część kontekstu między wywołaniami i nie przetwarza go ponownie. Zamiast płacić pełną cenę za każdy token przy każdym wywołaniu, powtarzające się fragmenty (instrukcje, dokumenty, system prompt) są odczytywane z cache — taniej i szybciej.
 
 ---

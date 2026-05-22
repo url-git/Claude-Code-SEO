@@ -4,6 +4,22 @@
 
 ---
 
+> ## Kiedy ta wiedza jest Ci potrzebna?
+>
+> | Scenariusz | Czy musisz konfigurować cache? | Dlaczego |
+> |---|---|---|
+> | Claude Code w terminalu | ❌ Nie | Anthropic kesuje automatycznie pod maską |
+> | Własne komendy slash (`/seo-audit`) | ❌ Nie | To nadal Claude Code — działa autocache |
+> | Skrypt Python z `anthropic.Anthropic()` | ✅ Tak | Bez `cache_control` cache nie powstaje |
+> | Usługa na Cloud Run / Cloud Functions / Lambda | ✅ **Tak — kluczowe** | Każdy request usługi = osobne wywołanie API; bez cache koszty rosną liniowo z ruchem |
+> | Batch API (wiele audytów naraz) | ✅ Tak | Cache + batch = największa redukcja kosztu |
+>
+> **Niuans dla serverless:** cache żyje po stronie Anthropica, nie Twojej. Zimny start Cloud Run, nowa instancja kontenera, request trafiający do innego node'a — cache i tak działa, bo jest powiązany z kombinacją (API key + treść prefiksu), a nie z Twoją infrastrukturą.
+>
+> Krótko: **w terminalu — ciekawostka. We własnej aplikacji wołającej API — decyzja architektoniczna z bezpośrednim wpływem na rachunek.**
+
+---
+
 ## Czym właściwie jest prompt caching — model mentalny
 
 Standardowo każde wywołanie API to świeży start: model dostaje cały kontekst (system prompt, historia, dokumenty) i przetwarza go od zera. To jak otwieranie tej samej grubej książki za każdym razem, gdy chcesz zadać jedno pytanie.
