@@ -8,7 +8,7 @@
     "allow": [
       "Bash(curl -sI *)",
       "Bash(curl -s https://*)",
-      "WebFetch(https://ntfy.pl/*)",
+      "WebFetch(domain:ntfy.pl)",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_take_screenshot",
@@ -17,7 +17,7 @@
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_close",
       "Bash(mkdir -p *)",
-      "Write(/Users/p/Documents/dev/Claude-Code/reports/*)"
+      "Write(/Users/p/Documents/dev/Claude-Code-SEO/reports/*)"
     ],
     "deny": []
   },
@@ -26,7 +26,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "hooks/on-git-push.sh" }
+          {
+            "type": "command",
+            "command": "hooks/on-git-push.sh"
+          }
         ]
       }
     ]
