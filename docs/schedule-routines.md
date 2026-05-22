@@ -45,7 +45,7 @@ Każdego ranka o 03:00 dzieje się to bez żadnej interakcji:
   │
   ├── Klonuje repo z GitHub (tymczasowa kopia robocza)
   ├── Tworzy plik .env z tokenem Apify (token zapisany w konfiguracji rutyny)
-  ├── Aktywuje venv i uruchamia scrape.py dla 9 fraz jednocześnie
+  ├── Uruchamia scrape.py dla 8 fraz jednocześnie (scrape.py auto-instaluje brakujące pakiety)
   ├── Generuje raport po polsku (output/tweets-YYYY-MM-DD.md)
   ├── git add → git commit → git push
   │
