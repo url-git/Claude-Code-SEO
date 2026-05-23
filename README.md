@@ -174,6 +174,59 @@ Komendy projektowe nadpisują globalne, jeśli mają tę samą nazwę.
 
 ---
 
+## Custom subagent — `@seo-specialist`
+
+### Czym różni się agent od komendy slash?
+
+| Mechanizm | Co to jest | System prompt | Przykład |
+|-----------|-----------|---------------|----------|
+| **Komenda** `/seo-audit` | Instrukcja wklejona jako wiadomość użytkownika | Tylko domyślny prompt Claude Code | `/seo-audit` |
+| **Agent** `seo-specialist` | Własny system prompt + własny kontekst | "Jesteś ekspertem SEO..." + domyślny prompt CC | `@seo-specialist /seo-audit` |
+
+Agent daje ci **dodatkową warstwę system promptu** — możesz powiedzieć mu kim jest, jakie ma priorytety i jak ma pracować. Gdy połączysz agenta z komendą (`@seo-specialist /seo-audit`), dostajesz **system prompt (agent) + instrukcję (komenda)** — dwa w jednym.
+
+### Plik agenta
+
+`.claude/agents/seo-specialist.md`:
+```markdown
+---
+name: seo-specialist
+description: Specjalista SEO do audytu i optymalizacji stron...
+tools: Read, Write, Bash, WebFetch, Glob, Grep, Agent
+model: sonnet
+skills:
+  - audit-subpages
+  - compare-reports
+memory: project
+---
+
+Jesteś ekspertem SEO...
+```
+
+Kluczowe różnice vs. komenda:
+- **Frontmatter** zawiera `tools` (lista dozwolonych narzędzi), `model` (może być inny niż sesja główna), `skills` (preloadowane skille — agent od razu ma ich treść w kontekście), `memory` (trwała pamięć między sesjami)
+- **Body** to system prompt agenta — nie instrukcja do wykonania, tylko definicja kim jest
+
+### Jak wywoływać
+
+| Sposób | Przykład | Efekt |
+|--------|----------|-------|
+| `@`-mention | `@seo-specialist /seo-audit` | Agent + komenda — najpełniejszy przekaz |
+| `@`-mention + opis | `@seo-specialist sprawdź SEO ntfy.pl` | Agent sam decyduje co zrobić |
+| Natural language | *"Użyj seo-specialist do audytu"* | Claude decyduje czy delegować |
+| CLI flag | `claude --agent seo-specialist` | Cała sesja działa jako ten agent |
+| Ustawienie stałe | `"agent": "seo-specialist"` w settings.json | Domyślny agent dla projektu |
+
+### Kiedy agent się ładuje?
+
+Przy starcie sesji. Jeśli dodajesz/edytujesz plik `.claude/agents/*.md` — **zrestartuj sesję**. Wyjątek: tworzenie przez `/agents` działa od razu.
+
+### Dokumentacja
+
+Źródło: https://code.claude.com/docs/en/sub-agents — rozdział "Invoke subagents explicitly" o `@`-mention.
+
+---
+
 ## MCP i Playwright — jak to naprawdę działa
 
 ### Co to jest MCP?
