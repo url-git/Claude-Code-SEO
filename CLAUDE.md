@@ -12,7 +12,8 @@ Folder lokalny: `~/Documents/dev/Claude-Code-SEO` | Repo: `github.com/url-git/Cl
 |---------|----------------|
 | `CLAUDE.md` | Ten plik. Claude wczytuje go automatycznie na początku każdej sesji. |
 | `.claude/settings.json` | Konfiguracja sesji: MCP serwer Playwright, uprawnienia, hooki, zmienna `AUDIT_URL`. |
-| `.claude/commands/` | Własne komendy slash. `/seo-audit` uruchamia pełny audyt SEO. |
+| `.claude/commands/` | Komendy slash: `/seo-audit` (pełny audyt SEO), `/summarize` (podsumowanie sesji). |
+| `.claude/skills/` | Skile: `/audit-subpages` (równoległy audyt podstron), `/compare-reports` (porównanie raportów). |
 | `docs/` | Notatki z nauki — jeden plik Markdown na temat. |
 | `hooks/` | Skrypty hooków. `on-git-push.sh` wysyła powiadomienie macOS gdy Claude wykona `git push`. |
 | `reports/` | Wygenerowane raporty SEO w formacie Markdown. |
@@ -30,8 +31,9 @@ Claude otworzy https://ntfy.pl/ przez Playwright, sprawdzi wszystkie elementy SE
 ## Tematy do nauki
 
 - **MCP** — konfiguracja serwera Playwright w `settings.json`, narzędzia do kontroli przeglądarki
-- **Komendy slash** — tworzenie własnych komend w `.claude/commands/`
+- **Skile** — tworzenie skili w `.claude/skills/nazwa/SKILL.md` (zalecany format wg Anthropic)
+- **Komendy slash** — starszy format w `.claude/commands/`, nadal działa równolegle ze skilami
 - **Hooki** — zdarzenie `PostToolUse` z matcherem `Bash`, wykrywanie `git push`, powiadomienia macOS
 - **settings.json** — uprawnienia, zmienne env, MCP serwery
-- **Agenci** — równoległe audyty wielu podstron (`/agents`, subagenci w Claude Code)
+- **Agenci** — równoległe audyty wielu podstron (`/audit-subpages`, subagenci w Claude Code)
 - **Pamięć** — porównywanie raportów między sesjami (system memory w `~/.claude/projects/-Users-p-Documents-dev-Claude-Code-SEO/memory/`)
