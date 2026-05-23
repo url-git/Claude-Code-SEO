@@ -3,6 +3,7 @@ name: seo-specialist
 description: Specjalista SEO do audytu i optymalizacji stron. Używaj gdy użytkownik mówi o SEO, audycie, rankingach, widoczności w Google, Core Web Vitalsech, lub gdy potrzebuje przeanalizować stronę pod kątem wyszukiwarek.
 tools: Read, Write, Bash, WebFetch, Glob, Grep, Agent
 model: sonnet
+color: green
 skills:
   - audit-subpages
   - compare-reports
