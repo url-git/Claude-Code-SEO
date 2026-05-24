@@ -1,37 +1,41 @@
 # `/schedule` w Claude Code — automatyczny cotygodniowy audyt SEO
 
-`/schedule` pozwala zlecić Claude Code wykonanie zadania w określonym czasie lub cyklicznie — bez udziału człowieka. Zaplanowany agent startuje jak cron: niezależnie od tego, czy masz otwartą sesję, czy nie.
+`/schedule` pozwala zlecić Claude Code wykonanie zadania w określonym czasie lub cyklicznie — **w chmurze Anthropica**, niezależnie od tego, czy masz otwartą sesję, czy włączony komputer. Agent startuje jak cron, klonuje repo z GitHub, wykonuje zadanie i wyłącza się.
+
+> Pełny opis mechanizmu rutyn chmurowych: [`schedule-routines.md`](schedule-routines.md). Ten plik skupia się na zastosowaniu w audycie SEO.
+
+---
 
 ## Jak różni się od `/loop` i sesji interaktywnej?
 
-| | Sesja interaktywna | `/loop` | `/schedule` |
+| | Sesja interaktywna | `/loop` | `/schedule` (rutyna) |
 |---|---|---|---|
 | Wymaga otwartej sesji | ✅ | ✅ | ❌ |
-| Działa bez człowieka | ❌ | ❌ | ✅ |
+| Działa gdy Mac śpi | ❌ | ❌ | ✅ |
 | Pamięta historię rozmowy | ✅ | ✅ | ❌ |
-| Uruchamia się o konkretnej godzinie | ❌ | ❌ | ✅ |
-| Analogia | rozmowa | pętla w rozmowie | cron job |
+| Uruchamia się o godzinie | ❌ | ❌ | ✅ |
+| Gdzie działa | Lokalnie | Lokalnie | **Serwery Anthropic** |
+| Analogia | rozmowa | pętla w rozmowie | cron job w chmurze |
 
 ### Przykłady komend `/loop`
 
 | Komenda | Co robi |
 |---------|---------|
-| `/loop 5m /seo-audit` | Co 5 minut uruchamia pełny audyt SEO — dopóki nie wciśniesz Ctrl+C |
-| `/loop 1m sprawdź, czy strona ntfy.pl odpowiada` | Co minutę pinguje stronę i informuje, jeśli nie odpowiada |
-| `/loop 30s pokaż ostatnią linię pliku reports/ntfy-pl-2026-05-22.md` | Co 30 sekund odświeża podgląd pliku — przydatne podczas pisania raportu |
-| `/loop` | Tryb autonomiczny bez interwału — Claude sam decyduje, co robić i kiedy sprawdzić ponownie |
+| `/loop 5m /seo-audit` | Co 5 min pełny audyt SEO — dopóki Ctrl+C |
+| `/loop 1m sprawdź, czy ntfy.pl odpowiada` | Co minutę pinguje stronę |
+| `/loop` | Tryb autonomiczny — Claude sam dobiera tempo |
 
-Interwał podajesz w sekundach (`30s`), minutach (`5m`) lub godzinach (`1h`). Bez interwału Claude sam dobiera tempo. Pętla działa tylko w otwartej sesji — zamknięcie terminala ją przerywa.
+Interwał: `30s`, `5m`, `1h`. Pętla działa tylko w otwartej sesji — zamknięcie terminala ją przerywa.
 
 ---
 
-Kluczowa różnica: **zaplanowany agent startuje „na zimno"** — nie ma żadnego kontekstu z poprzednich sesji. Instrukcje w komendzie muszą być kompletne i samodzielne.
+Kluczowa różnica rutyn: **agent startuje „na zimno"** — bez kontekstu z poprzednich sesji. Instrukcje w komendzie muszą być kompletne i samodzielne.
 
 ---
 
 ## Dlaczego to ma sens dla audytu SEO?
 
-Folder `reports/` staje się archiwum historycznych audytów z datą w nazwie:
+Folder `reports/` staje się archiwum z datą w nazwie:
 
 ```
 reports/
@@ -41,43 +45,37 @@ reports/
 └── ntfy-pl-2026-06-02.md
 ```
 
-Możesz śledzić trendy SEO ntfy.pl w czasie bez żadnej ręcznej pracy. Po każdym audycie hook `on-git-push.sh` wyśle powiadomienie macOS — dowiesz się, że job się wykonał.
+Możesz śledzić trendy SEO ntfy.pl bez żadnej ręcznej pracy.
 
 ---
 
-## Krok 1 — Sprawdź, czy `seo-audit.md` jest samodzielny
+## Krok 1 — Upewnij się, że `seo-audit.md` jest samodzielny
 
-Zaplanowany agent wczyta `CLAUDE.md` i `settings.json`, ale **nie będzie pamiętał żadnej poprzedniej rozmowy**. Komenda `/seo-audit` musi działać bez żadnych założeń kontekstowych.
+Agent wczyta `CLAUDE.md` i `settings.json` ze sklonowanego repo, ale **nie zna żadnej poprzedniej rozmowy**. Komenda `/seo-audit` musi działać bez założeń kontekstowych. Sprawdź, czy zawiera:
 
-Sprawdź, czy `seo-audit.md` zawiera:
-- ✅ Pełny URL audytowanej strony (lub zmienną `$AUDIT_URL` z `settings.json`)
+- ✅ URL audytowanej strony (lub zmienną `$AUDIT_URL` z `settings.json`)
 - ✅ Nazwę pliku wynikowego z datą (np. `reports/YYYY-MM-DD.md`)
 - ✅ Instrukcję commitu i pushu po zapisaniu raportu
 
-Aktualny stan `settings.json` w tym projekcie:
+Aktualny `settings.json`:
 ```json
-{
-  "env": {
-    "AUDIT_URL": "https://ntfy.pl/"
-  }
-}
+{ "env": { "AUDIT_URL": "https://ntfy.pl/" } }
 ```
 
-`$AUDIT_URL` jest wstrzykiwany automatycznie — komenda `/seo-audit` jest już samodzielna.
+`$AUDIT_URL` jest wstrzykiwany automatycznie — `/seo-audit` jest samodzielne.
 
 ---
 
-## Krok 2 — Dodaj instrukcję auto-commit do `seo-audit.md`
+## Krok 2 — Auto-commit w `seo-audit.md`
 
-Zaplanowany agent po zapisaniu raportu musi sam go zacommitować i spushować — inaczej raport zostanie tylko lokalnie i nie dostaniesz powiadomienia przez hook.
+Agent po zapisaniu raportu musi sam go zacommitować i spushować — bez tego raport zostanie tylko w tymczasowej kopii roboczej agenta i zniknie po sesji.
 
-Dodaj na końcu `.claude/commands/seo-audit.md` sekcję:
+Dodaj na końcu `.claude/commands/seo-audit.md`:
 
 ```markdown
 ## Automatyczny commit po audycie
 
 Po zapisaniu raportu wykonaj:
-
 1. `git add reports/`
 2. `git commit -m "Automatyczny audyt SEO — [data]"`
 3. `git push origin main`
@@ -85,15 +83,11 @@ Po zapisaniu raportu wykonaj:
 Nie pytaj o potwierdzenie — wykonaj od razu.
 ```
 
-Upewnij się też, że w `settings.json` jest uprawnienie do push:
+Uprawnienia w `settings.json`:
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git push *)"
-    ]
+    "allow": ["Bash(git add *)", "Bash(git commit *)", "Bash(git push *)"]
   }
 }
 ```
@@ -102,82 +96,57 @@ Upewnij się też, że w `settings.json` jest uprawnienie do push:
 
 ## Krok 3 — Uruchom `/schedule`
 
-Wpisz w sesji Claude Code:
-
 ```
 /schedule
 ```
 
-Otworzy się kreator. Skonfiguruj:
+Kreator zapyta o:
+- **Kiedy:** np. `co poniedziałek o 8:00` (lub cron `0 8 * * 1`)
+- **Co zrobić:** prompt (patrz niżej)
+- **Repozytorium:** GitHub URL projektu (agent klonuje stamtąd kod)
 
-- **Kiedy:** `co poniedziałek o 8:00` (lub własny cron, np. `0 8 * * 1`)
-- **Co zrobić:** wklej prompt (patrz niżej)
-- **Katalog projektu:** `/Users/p/Documents/dev/Claude-Code-SEO`
-
-### Prompt dla zaplanowanego agenta
+### Prompt dla rutyny
 
 ```
 Wykonaj pełny audyt SEO zgodnie z instrukcjami z .claude/commands/seo-audit.md.
 Działaj autonomicznie, nie pytaj o potwierdzenie.
 ```
 
-Krótki prompt jest możliwy dlatego, że `seo-audit.md` zawiera już wszystko: URL (`$AUDIT_URL` z `settings.json`), format nazwy pliku z datą, instrukcję auto-commit i push. Jedna prawda w jednym miejscu — prompt tylko ją wywołuje.
+Krótki prompt wystarczy, bo `seo-audit.md` zawiera wszystko: URL, format nazwy pliku z datą, auto-commit i push.
 
 ---
 
-## Krok 4 — Zweryfikuj działanie hoka
+## Krok 4 — Zweryfikuj działanie
 
-Hook `hooks/on-git-push.sh` wysyła powiadomienie macOS gdy Claude wykona `git push`. Po skonfigurowaniu `/schedule` możesz to sprawdzić bez czekania tygodnia — uruchom audyt ręcznie:
+Po uruchomieniu rutyny możesz przetestować bez czekania na cron — z poziomu https://claude.ai/code/routines kliknij "Run now". Lub uruchom audyt lokalnie:
 
 ```
 /seo-audit
 ```
 
-Jeśli po zakończeniu pojawi się powiadomienie systemowe z tytułem "Claude Code — git push" — hook działa i automatyczny audyt też będzie działał.
-
-Jeśli powiadomienia nie ma, sprawdź:
-
-```bash
-# Czy hook jest wykonywalny?
-ls -la hooks/on-git-push.sh
-
-# Czy settings.json wskazuje na hook?
-cat .claude/settings.json | grep -A5 "PostToolUse"
-```
+Jeśli `git push` się powiedzie → rutyna też zadziała. Hook lokalny `on-git-push.sh` **nie odpali się dla rutyny** (agent działa zdalnie), ale push do GitHub jest potwierdzeniem.
 
 ---
 
 ## Krok 5 — Obserwuj archiwum raportów
 
-Po pierwszym automatycznym audycie w `reports/` pojawi się nowy plik. Porównaj go z poprzednim:
-
-```bash
-# Diff między dwoma tygodniowymi raportami
-diff reports/ntfy-pl-2026-05-19.md reports/ntfy-pl-2026-05-26.md
-```
-
-Lub poproś Claude'a:
+Po pierwszym automatycznym audycie poproś Claude'a o porównanie:
 
 ```
-Porównaj raporty reports/ntfy-pl-2026-05-19.md i reports/ntfy-pl-2026-05-26.md.
+Porównaj reports/ntfy-pl-2026-05-19.md i ntfy-pl-2026-05-26.md.
 Powiedz, które problemy SEO zostały naprawione, które się pogorszyły,
-a które są nowe. Skup się na zmianach, nie na powtarzaniu całego raportu.
+a które są nowe. Skup się na zmianach.
 ```
 
 ---
 
-## Zarządzanie zaplanowanymi audytami
+## Zarządzanie rutynami
 
-```bash
-# Lista aktywnych zadań
-/schedule list
-
-# Zatrzymanie konkretnego zadania
-/schedule delete [id]
-
-# Uruchomienie teraz (test bez czekania)
-/schedule run [id]
-```
+Wszystko widoczne na **https://claude.ai/code/routines**:
+- Historia uruchomień i logi
+- Edycja harmonogramu lub promptu
+- Ręczne uruchomienie (test bez czekania)
+- Pauza / usunięcie
 
 ---
 
@@ -185,34 +154,26 @@ a które są nowe. Skup się na zmianach, nie na powtarzaniu całego raportu.
 
 | Problem | Przyczyna | Rozwiązanie |
 |---------|-----------|-------------|
-| Agent commituje, ale push failuje | Brak `Bash(git push *)` w allowliście | Dodaj do `permissions.allow` w `settings.json` |
-| Raport zapisany, ale bez daty | `seo-audit.md` używa stałej nazwy | Upewnij się, że nazwa pliku zawiera `$(date)` lub wywiedź datę z kontekstu |
-| Hook nie wysyła powiadomienia | Skrypt nie jest wykonywalny lub ścieżka zła | `chmod +x hooks/on-git-push.sh` i sprawdź matcher w `settings.json` |
-| Agent nie wie, co audytować | Brak `$AUDIT_URL` lub URL w prompcie | Sprawdź `env.AUDIT_URL` w `settings.json` — lub wpisz URL bezpośrednio w prompcie |
-| Job się nie uruchamia | Komputer uśpiony o 8:00 | Zmień godzinę lub użyj zdalnego schedulera (patrz niżej) |
-
-### Uwaga o uśpieniu komputera
-
-`/schedule` działa lokalnie — jeśli Mac jest uśpiony o zaplanowanej godzinie, job się nie wykona. Rozwiązania:
-- Zmień godzinę na taką, gdy komputer jest aktywny
-- Lub użyj zdalnego agenta przez `/schedule` w trybie cloud (jeśli dostępny na Twoim planie)
+| Agent commituje, ale push failuje | Brak `Bash(git push *)` w allowliście | Dodaj do `permissions.allow` |
+| Raport bez daty | `seo-audit.md` używa stałej nazwy | Użyj `$(date)` lub wywiedź datę z kontekstu |
+| Agent nie wie, co audytować | Brak `$AUDIT_URL` | Sprawdź `env.AUDIT_URL` w `settings.json` |
+| Hook lokalny nie wysyła powiadomienia | Agent działa zdalnie | Hook lokalny NIE odpala się dla rutyn — push do GitHub jest potwierdzeniem |
 
 ---
 
 ## Podsumowanie
 
 ```
-Co poniedziałek 8:00
+Co poniedziałek 8:00 (serwery Anthropic)
         │
-        └── Agent startuje „na zimno"
-            ├── Wczytuje CLAUDE.md + settings.json
-            ├── Uruchamia /seo-audit (instrukcje z seo-audit.md)
-            ├── Zapisuje reports/ntfy-pl-YYYY-MM-DD.md
-            └── git add → git commit → git push
-                                            │
-                                   hook on-git-push.sh
-                                            │
-                               Powiadomienie macOS ✅
+        ├── Klonuje repo z GitHub
+        ├── Wczytuje CLAUDE.md + settings.json
+        ├── Uruchamia /seo-audit
+        ├── Zapisuje reports/ntfy-pl-YYYY-MM-DD.md
+        └── git add → git commit → git push
+                    │
+                  GitHub aktualizuje repo
+                  (powiadomienie w aplikacji Git na telefonie)
 ```
 
-Kluczowa lekcja: zaplanowany agent musi działać samodzielnie bez żadnych założeń kontekstowych — to wymusza pisanie dobrych, kompletnych instrukcji w komendach slash.
+Kluczowa lekcja: agent rutynowy musi działać samodzielnie bez założeń kontekstowych — to wymusza pisanie kompletnych instrukcji w komendach slash.
