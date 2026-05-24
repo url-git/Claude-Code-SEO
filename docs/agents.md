@@ -24,12 +24,24 @@ Claude Code ma wbudowane agenty. Różnica kluczowa:
 
 | Agent | Typ | Widzi skille? | Model | Narzędzia |
 |-------|-----|---------------|-------|-----------|
-| **Explore** | built-in | ❌ Nie | Haiku | Tylko read-only |
-| **Plan** | built-in | ❌ Nie | Taki jak sesja | Tylko read-only |
-| **General-purpose** | built-in | ❌ Nie | Taki jak sesja | Wszystkie |
+| **Explore** | built-in | ⚠️ Nie z automatu | Haiku | Tylko read-only |
+| **Plan** | built-in | ⚠️ Nie z automatu | Taki jak sesja | Tylko read-only |
+| **General-purpose** | built-in | ⚠️ Nie z automatu | Taki jak sesja | Wszystkie |
 | **Custom** (twój) | zdefiniowany | **✅ Tak** | Ustawiasz sam | Ustawiasz sam |
 
-**Co to oznacza w praktyce:** Explore, Plan i General nie mają dostępu do mechanizmu skilli — nie załadują `SKILL.md`. Tylko custom subagenty (`seo-specialist`, `code-reviewer` itp.) mogą preloadować skille przez pole `skills` w frontmatterze.
+### Dlaczego "nie z automatu" — mieć narzędzie ≠ wiedzieć kiedy użyć
+
+Wbudowane agenty technicznie **mają** narzędzie `Skill` w swoim zestawie (Explore i Plan mają wszystkie narzędzia oprócz Agent/Edit/Write, General ma `*`). Ale samo posiadanie narzędzia nie wystarczy — żeby agent wywołał skilla, musi:
+
+1. **Wiedzieć, że skille istnieją** — ich nazwy i triggery muszą być w kontekście
+2. **Znać nazwę skilla** — `Skill` tool wymaga podania konkretnej nazwy
+3. **Uznać, że zadanie pasuje** — na podstawie opisu skilla
+
+Główna sesja Claude Code to robi, bo system-reminder wstrzykuje jej listę dostępnych skilli z triggerami. Wbudowany subagent dostaje **wąski prompt zadania** (np. "przeszukaj pliki pod X") — bez listy skilli, bez CLAUDE.md w pełnej formie. Więc nawet jeśli technicznie może wywołać `Skill`, nie wie co wołać.
+
+**Jedyny wyjątek:** jeśli w prompcie przekazanym do subagenta explicite napiszesz "użyj skilla X", to go wywoła. Ale to ręczna instrukcja, nie automatyczne wykrycie.
+
+**Custom agenty z `skills:` w frontmatterze** mają inaczej — treść skilli jest **wstrzyknięta do kontekstu od razu** przy starcie, więc agent wie o nich zanim dostanie jakiekolwiek zadanie.
 
 ---
 

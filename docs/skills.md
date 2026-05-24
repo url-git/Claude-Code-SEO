@@ -59,6 +59,36 @@ Claude dopasowuje skil do tego, co faktycznie piszesz w rozmowie.
 
 ---
 
+## Co widzi główna sesja — skąd Claude wie o skillu?
+
+Zanim Claude wywoła skilla, musi o nim wiedzieć. Główna sesja ma w kontekście cztery źródła:
+
+| Źródło | Co zawiera | Kto wstrzykuje |
+|--------|------------|----------------|
+| **CLAUDE.md** | Instrukcje projektu, struktura folderów | Ty (plik w repo) |
+| **settings.json** | Uprawnienia, MCP, zmienne env | Ty (plik konfiguracyjny) |
+| **MEMORY.md** | Pamięć z poprzednich sesji | Claude automatycznie |
+| **system-reminder** | Lista dostępnych skilli z triggerami | Harness automatycznie |
+
+### Czym jest system-reminder?
+
+`system-reminder` to niewidoczny blok tekstu, który harness Claude Code wstrzykuje do kontekstu sesji automatycznie — nie piszesz go, nie widzisz go w rozmowie, ale Claude go otrzymuje. Zawiera m.in.:
+
+- listę dostępnych skilli z ich opisami i triggerami
+- listę dostępnych agentów z opisami
+- aktualną datę
+- inne metadane sesji
+
+Właśnie dlatego Claude "sam z siebie" wie kiedy wywołać `/audit-subpages` — bo system-reminder mówi mu: *"użyj gdy użytkownik mówi: audytuj podstrony, sprawdź wszystkie strony..."*. Claude dopasowuje to do Twojego zapytania bez żadnej Twojej instrukcji.
+
+### Dlaczego subagenci tego nie mają?
+
+Wbudowane subagenty (Explore, Plan, General-purpose) dostają **wąski prompt zadania** — bez CLAUDE.md projektu, bez system-remindera z listą skilli. Technicznie mają narzędzie `Skill`, ale nie wiedzą jakie skille istnieją ani kiedy je wywołać. Dlatego nie używają skilli automatycznie.
+
+Custom agent z `skills:` w frontmatterze omija ten problem inaczej — treść skilli jest wstrzyknięta do jego kontekstu od startu, niezależnie od system-remindera.
+
+---
+
 ## `allowed-tools` — po co ograniczać narzędzia?
 
 Domyślnie Claude ma dostęp do wszystkich narzędzi. `allowed-tools` ogranicza dostęp wyłącznie do listy, którą podasz.
