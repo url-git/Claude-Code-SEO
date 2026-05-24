@@ -1,22 +1,39 @@
 # Extended Thinking w Claude Code
 
-Extended Thinking to tryb, w którym Claude poświęca dodatkowy czas na wewnętrzne rozumowanie przed udzieleniem odpowiedzi. Zamiast od razu generować wynik, model „myśli na głos" w ukrytym bloku — waży argumenty, odrzuca złe ścieżki, wraca do pytania — a dopiero potem formułuje odpowiedź.
-
-W Claude Code widoczne jest jako zwijany blok `<thinking>` przed odpowiedzią.
+Extended Thinking to tryb, w którym Claude poświęca dodatkowy czas na wewnętrzne rozumowanie przed udzieleniem odpowiedzi. Model „myśli na głos" w ukrytym bloku — waży argumenty, odrzuca złe ścieżki — a dopiero potem formułuje odpowiedź. W Claude Code widoczne jako zwijany blok `▶ Myślenie`.
 
 ---
 
 ## Czym różni się od zwykłego trybu?
 
-| | Standardowy model | Extended Thinking |
+| | Standardowy | Extended Thinking |
 |---|---|---|
 | Rozumowanie | Ukryte, skrócone | Widoczne, wieloetapowe |
-| Czas odpowiedzi | Szybki | Wolniejszy |
-| Koszt tokenów | Niższy | Wyższy |
-| Jakość analizy złożonych problemów | Dobra | Znacznie lepsza |
+| Czas odpowiedzi | Szybki | Wolniejszy (30–90 s) |
+| Koszt | Niższy | Wyższy (myślenie też jest billowane jako output) |
 | Kiedy warto | Zadania rutynowe | Decyzje, strategie, diagnoza |
 
-Extended Thinking jest dostępne w modelach **Opus 4.7** i **Sonnet 4.5+**. Największy efekt daje Opus — ma najgłębsze rozumowanie.
+---
+
+## Adaptive thinking vs manual (stan 2026)
+
+Anthropic zmienił model API:
+
+| Model | Tryb |
+|---|---|
+| **Opus 4.7** | Tylko **adaptive thinking** — manualne `budget_tokens` zwraca 400 |
+| **Opus 4.6, Sonnet 4.6** | Adaptive zalecane, manual deprecated (ale działa) |
+| Starsze modele | Manual `budget_tokens` |
+
+**Adaptive** = Claude sam decyduje, ile myśleć, na podstawie złożoności promptu i opcjonalnego `effort` parametru. W Claude Code dzieje się to automatycznie — nie musisz nic konfigurować.
+
+```python
+# stare (deprecated)
+thinking={"type": "enabled", "budget_tokens": 10000}
+
+# nowe (zalecane)
+thinking={"type": "adaptive"}
+```
 
 ---
 
@@ -24,44 +41,30 @@ Extended Thinking jest dostępne w modelach **Opus 4.7** i **Sonnet 4.5+**. Najw
 
 ### Zmiana modelu na Opus
 
-W sesji wpisz:
-
 ```
 /model
 ```
 
-Wybierz `claude-opus-4-7`. Od tej chwili Claude używa Opusa z domyślnym poziomem myślenia.
+Wybierz `claude-opus-4-7`. Od tej chwili Claude używa Opusa z adaptive thinking.
 
-### Tryb Fast (wyłącza thinking)
+### Tryb Fast
 
 ```
 /fast
 ```
 
-Przełącza Opus w tryb szybki — bez extended thinking. Przydatne gdy potrzebujesz szybkiej odpowiedzi, a nie głębokiej analizy.
+Przełącza Opus w tryb szybszego outputu — **nie wyłącza thinking**, tylko przyspiesza odpowiedź. Dostępne na Opus 4.6 i 4.7.
 
 ### Wymuszenie głębszego myślenia w prompcie
 
-Możesz poprosić wprost:
+Adaptive thinking reaguje na złożoność zapytania — wystarczy poprosić wprost:
 
 ```
 Przeanalizuj ten raport SEO dokładnie, zanim odpiszesz. Weź pod uwagę
 wszystkie zależności między problemami i zaproponuj priorytety.
 ```
 
-Claude automatycznie uruchomi dłuższe rozumowanie dla złożonych zapytań — nie musisz wpisywać żadnej komendy technicznej.
-
----
-
-## Jak to wygląda w praktyce
-
-Gdy Extended Thinking jest aktywne, przed odpowiedzią pojawia się zwijany blok:
-
-```
-▶ Myślenie (23s) ...
-```
-
-Po rozwinięciu widać wewnętrzny monolog Claude'a — hipotezy, odrzucone ścieżki, porównania. To diagnostycznie cenne: możesz zobaczyć, dlaczego Claude doszedł do danego wniosku, a nie tylko co stwierdził.
+Nie musisz wpisywać żadnej komendy technicznej — model sam dobiera budżet myślenia.
 
 ---
 
@@ -69,93 +72,69 @@ Po rozwinięciu widać wewnętrzny monolog Claude'a — hipotezy, odrzucone ści
 
 ### 1. Priorytetyzacja problemów SEO
 
-Standardowy Sonnet zbiera fakty: „brak meta description na 3 podstronach, wolny LCP, brak sitemapy". Extended Thinking z Opusem zadaje pytanie głębiej: **które z tych problemów realnie blokują ruch, a które to drobiazgi?** Uwzględnia kontekst biznesowy ntfy.pl, konkurencję i aktualny stan indeksacji.
-
-Przykład użycia:
+Sonnet zbiera fakty: „brak meta description, wolny LCP, brak sitemapy". Opus z thinking pyta głębiej: **które problemy realnie blokują ruch?** Uwzględnia kontekst biznesowy, konkurencję, stan indeksacji.
 
 ```
 /model → claude-opus-4-7
 
-Mam raport SEO ntfy.pl z maja 2026 (plik reports/ntfy-pl-2026-05-15.md).
-Przeanalizuj go i powiedz, które 3 problemy mają największy wpływ na ruch
-organiczny. Uzasadnij wybór.
+Mam raport SEO ntfy.pl z maja 2026 (reports/ntfy-pl-2026-05-15.md).
+Wskaż 3 problemy z największym wpływem na ruch organiczny. Uzasadnij.
 ```
 
-### 2. Porównanie dwóch raportów tygodniowych
+### 2. Porównanie raportów tygodniowych
 
-Zamiast diff-a linii, Opus może ocenić **czy zmiany idą w dobrym kierunku** i czy poprawa w jednym miejscu nie ukrywa regresji w innym.
-
-```
-Porównaj raporty reports/ntfy-pl-2026-05-15.md i reports/ntfy-pl-2026-05-22.md.
-Oceń trend: czy SEO ntfy.pl się poprawia? Wskaż, co mogło spowodować zmiany.
-```
-
-### 3. Diagnoza spadku ruchu
-
-Gdy pojawi się nagły spadek pozycji, Sonnet wylistuje możliwe przyczyny. Opus z thinking przeanalizuje je pod kątem prawdopodobieństwa, sprawdzi spójność z datami aktualizacji Google i zaproponuje kolejność działań diagnostycznych.
-
-### 4. Strategia contentowa
+Zamiast diff-a linii — ocena **czy zmiany idą w dobrym kierunku** i czy poprawa w jednym miejscu nie ukrywa regresji w innym.
 
 ```
-Na podstawie audytu ntfy.pl zaproponuj plan contentowy na najbliższe
-3 miesiące. Uwzględnij luki tematyczne, wolumen słów kluczowych i
-realistyczne możliwości małego serwisu SaaS.
+Porównaj reports/ntfy-pl-2026-05-15.md i ntfy-pl-2026-05-22.md.
+Oceń trend: czy SEO się poprawia? Co mogło spowodować zmiany?
 ```
 
-To zadanie wymaga syntezy wielu sygnałów — idealny przypadek dla Extended Thinking.
+### 3. Diagnoza spadku ruchu i strategia contentowa
+
+Złożone, syntetyczne zadania — Opus z thinking analizuje hipotezy pod kątem prawdopodobieństwa, sprawdza spójność z aktualizacjami Google, proponuje plan na 3 miesiące z uwzględnieniem luk tematycznych i realiów małego SaaS.
 
 ---
 
 ## Kiedy NIE używać Extended Thinking
 
 - Sprawdzenie robots.txt — wystarczy `curl`
-- Pobranie tytułu strony — rutynowe, Sonnet daje radę
+- Pobranie tytułu strony — Sonnet daje radę
 - Zapis raportu do pliku — bez sensu angażować Opusa
 - Szybkie pytanie o składnię komendy
 
-Reguła: jeśli zadanie można wykonać mechanicznie (fetch → zapis), używaj Sonnet. Jeśli wymaga oceny, priorytetyzacji lub strategii — włącz Opusa z thinking.
+Reguła: zadanie mechaniczne (fetch → zapis) → Sonnet. Zadanie wymagające oceny, priorytetyzacji, strategii → Opus.
 
 ---
 
-## Porównanie wyników — ćwiczenie praktyczne
+## Interakcje z prompt caching
 
-Żeby poczuć różnicę, uruchom to samo zapytanie dwa razy:
+- **System prompt cache jest zachowywany** mimo zmian w thinking
+- **Message-level cache jest unieważniany** przy zmianie `budget_tokens` (nie dotyczy adaptive)
+- **Bloki thinking są keszowane** i liczą się jako input tokens przy odczycie
+- Dla zadań trwających >5 min użyj **TTL 1h** — thinking często przekracza domyślne 5 minut cache
 
-**Krok 1** — na domyślnym modelu (Sonnet):
-```
-Jakie są największe problemy SEO na ntfy.pl na podstawie ostatniego raportu?
-```
+---
 
-**Krok 2** — przełącz na Opus (`/model → claude-opus-4-7`) i zadaj to samo pytanie.
+## Porównanie wyników — ćwiczenie
+
+Uruchom to samo zapytanie dwa razy: na Sonnet i na Opus (`/model → claude-opus-4-7`).
 
 Porównaj:
-- Długość bloku `<thinking>`
-- Czy Opus odrzucił jakieś hipotezy, które Sonnet przyjął bez refleksji?
+- Długość bloku `▶ Myślenie`
+- Czy Opus odrzucił hipotezy, które Sonnet przyjął bez refleksji?
 - Czy priorytety są inne?
 - Ile czasu zajęła każda odpowiedź?
-
-Zanotuj obserwacje w `docs/backlog.md`.
-
----
-
-## Koszt i ograniczenia
-
-- Opus 4.7 jest droższy niż Sonnet — nie używaj go do zadań rutynowych
-- Extended Thinking zużywa więcej tokenów (myślenie też jest billowane)
-- Czas odpowiedzi może wynosić 30–90 sekund dla złożonych analiz
-- Cache prompt działa też z Opusem — długie instrukcje (jak `seo-audit.md`) są keszowane między wywołaniami, co częściowo kompensuje wyższy koszt
 
 ---
 
 ## Podsumowanie
 
 ```
-Kiedy używać Extended Thinking w tym projekcie:
-
-Sonnet (domyślny)          Opus + Extended Thinking
+Sonnet (domyślny)          Opus + adaptive thinking
 ─────────────────          ────────────────────────
 Fetch strony               Priorytetyzacja problemów
-Zapis raportu              Porównanie tygodniowych raportów
+Zapis raportu              Porównanie raportów
 Sprawdzenie robots.txt     Diagnoza spadku ruchu
 Rutynowe audyty            Strategia contentowa
 ```
