@@ -2,85 +2,84 @@
 
 ## Komendy wbudowane
 
-| Komenda | Opis (PL) |
-|---------|-----------|
-| `/add-dir` | Dodaj nowy katalog roboczy do sesji |
-| `/advisor` | Skonfiguruj Advisor Tool — konsultuje silniejszy model w kluczowych momentach |
-| `/agents` | Zarządzaj konfiguracją agentów |
-| `/autofix-pr` | Monitoruj i automatycznie naprawiaj problemy w bieżącym PR |
-| `/background` | Kontynuuj sesję w tle i zwolnij terminal |
-| `/branch` | Utwórz gałąź bieżącej rozmowy w tym miejscu |
-| `/btw` | Zadaj szybkie pytanie poboczne bez przerywania głównej rozmowy |
-| `/chrome` | Ustawienia Claude w Chrome (wersja beta) |
-| `/clear` | Rozpocznij nową sesję z pustym kontekstem (poprzednia zostaje na dysku, można wznowić przez `/resume`) |
-| `/color` | Ustaw kolor paska promptu dla tej sesji |
-| `/compact` | Zwolnij kontekst przez podsumowanie dotychczasowej rozmowy |
-| `/config` | Otwórz panel konfiguracji |
-| `/context` | Zwizualizuj bieżące użycie kontekstu jako kolorową siatkę |
-| `/copy` | Skopiuj ostatnią odpowiedź Claude do schowka (lub `/copy N` dla N-tej od końca) |
-| `/desktop` | Kontynuuj bieżącą sesję w Claude Desktop |
-| `/diff` | Pokaż niezatwierdzone zmiany i diffy z każdej tury |
-| `/exit` | Zakończ sesję Claude Code |
-| `/fast` | Przełącz tryb Fast (Claude Opus z szybszym wyjściem) |
+| Komenda | Opis |
+|---|---|
+| `/add-dir` | Dodaj katalog roboczy do sesji |
+| `/advisor` | Konsultuje silniejszy model w kluczowych momentach |
+| `/agents` | Zarządzaj agentami |
+| `/autofix-pr` | Auto-naprawa problemów w PR |
+| `/background` | Sesja w tle, zwolnij terminal |
+| `/branch` | Gałąź bieżącej rozmowy |
+| `/btw` | Szybkie pytanie poboczne bez przerywania |
+| `/chrome` | Ustawienia Claude w Chrome (beta) |
+| `/clear` | Nowa sesja z pustym kontekstem (wznowienie przez `/resume`) |
+| `/color` | Kolor paska promptu |
+| `/compact` | Podsumuj rozmowę, zwolnij kontekst |
+| `/config` | Panel konfiguracji |
+| `/context` | Wizualizacja użycia kontekstu |
+| `/copy` | Skopiuj odpowiedź do schowka (`/copy N` = N-ta od końca) |
+| `/desktop` | Kontynuuj sesję w Claude Desktop |
+| `/diff` | Niezatwierdzone zmiany i diffy z tur |
+| `/exit` | Zakończ sesję |
+| `/fast` | Tryb Fast (Opus z szybszym wyjściem) |
 | `/feedback` | Wyślij opinię o Claude Code |
-| `/fix` | Napraw błędy w bieżącym pliku lub zadaniu |
-| `/help` | Pokaż pomoc i listę dostępnych komend |
-| `/history` | Pokaż historię rozmów |
-| `/ide` | Zarządzaj integracją z IDE (VS Code, JetBrains) |
-| `/init` | Zainicjuj plik CLAUDE.md z dokumentacją projektu |
-| `/install-github-app` | Zainstaluj aplikację GitHub dla Claude Code |
-| `/login` | Zaloguj się na konto Anthropic |
-| `/logout` | Wyloguj się z konta Anthropic |
-| `/mcp` | Zarządzaj serwerami MCP (Model Context Protocol) |
-| `/memory` | Wyświetl i zarządzaj pamięcią Claude |
-| `/model` | Zmień model Claude używany w sesji |
-| `/new` | Rozpocznij nową rozmowę |
-| `/onboard` | Uruchom onboarding — wprowadzenie do projektu |
+| `/fix` | Napraw błędy w pliku lub zadaniu |
+| `/help` | Pomoc i lista komend |
+| `/history` | Historia rozmów |
+| `/ide` | Integracja z IDE (VS Code, JetBrains) |
+| `/init` | Inicjalizuj CLAUDE.md |
+| `/install-github-app` | Zainstaluj aplikację GitHub |
+| `/login` / `/logout` | Zalogowanie / wylogowanie |
+| `/mcp` | Zarządzaj serwerami MCP |
+| `/memory` | Pamięć Claude |
+| `/model` | Zmień model |
+| `/new` | Nowa rozmowa |
+| `/onboard` | Onboarding projektu |
 | `/open` | Otwórz plik lub zasób |
-| `/permissions` | Zarządzaj uprawnieniami narzędzi |
-| `/plan` | Wejdź w tryb planowania implementacji |
-| `/pr-comments` | Pokaż komentarze z bieżącego Pull Requesta |
-| `/release-notes` | Pokaż informacje o wydaniu Claude Code |
+| `/permissions` | Zarządzaj uprawnieniami |
+| `/plan` | Tryb planowania implementacji |
+| `/pr-comments` | Komentarze z PR |
+| `/release-notes` | Informacje o wydaniu |
 | `/resume` | Wznów poprzednią sesję |
-| `/review` | Zrecenzuj Pull Request |
+| `/review` | Recenzja PR |
 | `/run` | Uruchom komendę lub skrypt |
-| `/schedule` | Zarządzaj zaplanowanymi zadaniami (agenci cron) |
+| `/schedule` | Zaplanowane rutyny (cron w chmurze Anthropic) |
 | `/session` | Zarządzaj sesjami |
-| `/settings` | Edytuj ustawienia Claude Code |
+| `/settings` | Edycja ustawień |
 | `/share` | Udostępnij sesję |
-| `/status` | Pokaż status bieżącej sesji i zadań |
-| `/statusline` | Skonfiguruj pasek statusu Claude Code |
-| `/summarize` | Podsumuj bieżącą sesję — własna komenda slash z `.claude/commands/summarize.md` |
-| `/terminal-setup` | Skonfiguruj terminal dla Claude Code |
-| `/theme` | Zmień motyw kolorystyczny interfejsu |
-| `/todos` | Pokaż listę zadań (TODO) |
-| `/ultrareview` | Uruchom wieloagentowy przegląd kodu bieżącej gałęzi lub PR |
-| `/update` | Zaktualizuj Claude Code do najnowszej wersji |
-| `/vim` | Przełącz tryb edycji Vim |
-| `/voice` | Włącz/wyłącz sterowanie głosem |
+| `/status` | Status sesji i zadań |
+| `/statusline` | Konfiguracja paska statusu |
+| `/summarize` | Podsumuj sesję (z `.claude/commands/summarize.md`) |
+| `/terminal-setup` | Konfiguracja terminala |
+| `/theme` | Motyw kolorystyczny |
+| `/todos` | Lista zadań |
+| `/ultrareview` | Wieloagentowy przegląd kodu gałęzi/PR |
+| `/update` | Aktualizacja Claude Code |
+| `/vim` | Tryb edycji Vim |
+| `/voice` | Sterowanie głosem |
 
-## Komendy projektu (własne / umiejętności)
+## Komendy projektu (własne / skille)
 
-| Komenda | Opis (PL) |
-|---------|-----------|
-| `/seo-audit` | Uruchom pełny audyt SEO strony (otwiera ntfy.pl przez Playwright i zapisuje raport) |
-| `/claude-api` | Buduj, debuguj i optymalizuj aplikacje z Claude API / Anthropic SDK |
-| `/review` | Zrecenzuj zmiany w bieżącym PR (umiejętność rozszerzona) |
-| `/security-review` | Przeprowadź przegląd bezpieczeństwa zmian na bieżącej gałęzi |
-| `/simplify` | Przejrzyj zmieniony kod pod kątem jakości i uprość go |
-| `/update-config` | Skonfiguruj zachowania automatyczne i uprawnienia w `settings.json` |
-| `/keybindings-help` | Dostosuj skróty klawiszowe (`~/.claude/keybindings.json`) |
-| `/fewer-permission-prompts` | Skanuj transkrypty i dodaj allowlist, by zmniejszyć liczbę próśb o uprawnienia |
-| `/loop` | Uruchom prompt lub komendę cyklicznie w określonym interwale |
-| `/init` | Zainicjuj plik CLAUDE.md z dokumentacją kodu projektu |
+| Komenda | Opis |
+|---|---|
+| `/seo-audit` | Pełny audyt SEO (ntfy.pl przez Playwright, zapis do `reports/`) |
+| `/audit-subpages` | Równoległy audyt podstron przez subagentów |
+| `/compare-reports` | Porównanie dwóch raportów SEO |
+| `/claude-api` | Buduj/debuguj aplikacje z Claude API |
+| `/security-review` | Przegląd bezpieczeństwa zmian |
+| `/update-config` | Konfiguracja `settings.json` (hooki, uprawnienia) |
+| `/keybindings-help` | Skróty klawiszowe (`~/.claude/keybindings.json`) |
+| `/fewer-permission-prompts` | Dodaj allowlist na podstawie transkryptów |
+| `/loop` | Cykliczne uruchamianie promptu/komendy |
 
-## Skróty klawiszowe (terminal)
+## Skróty klawiszowe
 
 | Skrót | Działanie |
-|-------|-----------|
-| `Ctrl+C` | Przerwij bieżące zadanie |
+|---|---|
+| `Ctrl+C` | Przerwij zadanie |
 | `Ctrl+L` | Wyczyść ekran |
-| `Tab` | Autouzupełnianie komend i ścieżek |
-| `↑ / ↓` | Przeglądaj historię komend |
-| `Shift+Enter` | Nowa linia w prompcie (bez wysyłania) |
-| `!<komenda>` | Uruchom komendę powłoki bezpośrednio (np. `!git status`) |
+| `Tab` | Autouzupełnianie |
+| `↑ / ↓` | Historia komend |
+| `Shift+Enter` | Nowa linia bez wysyłania |
+| `!<komenda>` | Uruchom komendę powłoki (np. `!git status`) |
+| `←` (w pustym prompcie) | Panel agentów |
