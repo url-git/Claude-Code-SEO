@@ -8,92 +8,69 @@
 > | Audyt 1-2 stron raz w tygodniu | ❌ — narzut konfiguracji większy niż oszczędność |
 > | Audyt 20-100+ podstron ntfy.pl | ✅ — oszczędność 50% + równoległość |
 > | Codzienna analiza wielu klientów (skrypt) | ✅ — idealny use case |
-> | Aplikacja na Cloud Run odpowiadająca w czasie rzeczywistym | ❌ — Batch ma 5min-24h opóźnienia |
+> | Aplikacja real-time | ❌ — Batch ma 5min–24h opóźnienia |
 >
-> Krótko: **Batch API to narzędzie do operacji masowych, których wynik nie jest potrzebny natychmiast.** Jeśli możesz poczekać kilka–kilkadziesiąt minut, płacisz 50% mniej. Jeśli potrzebujesz odpowiedzi w 3 sekundy — to nie jest to narzędzie.
+> Krótko: **Batch API = narzędzie do operacji masowych, których wynik nie jest potrzebny natychmiast.** Jeśli możesz poczekać kilkadziesiąt minut, płacisz 50%. Jeśli potrzebujesz odpowiedzi w 3 s — to nie jest to narzędzie.
 
 ---
 
-## Model mentalny — czym Batch różni się od standardowego API
+## Model mentalny
 
-Standardowe API to **dialog**: wysyłasz request, czekasz, dostajesz odpowiedź, wysyłasz kolejny. Każde wywołanie jest synchroniczne i blokuje Twój kod do momentu otrzymania wyniku.
-
-Batch API to **lista zakupów**: wrzucasz na nią 20-100 requestów naraz, oddajesz Anthropicowi i wracasz za jakiś czas po wszystkie wyniki naraz. Anthropic przetwarza je równolegle na swojej infrastrukturze, korzystając z momentów niskiego obciążenia. Stąd 50% rabat — w zamian za elastyczność czasową dostajesz znacznie niższą cenę.
+Standardowe API = **dialog**: request → czekasz → response, blokuje kod. Batch API = **lista zakupów**: wrzucasz 20-100 requestów naraz, Anthropic przetwarza je równolegle w momentach niskiego obciążenia, wracasz po wyniki później. Stąd 50% rabat.
 
 | | Standardowe API | Batch API |
 |---|---|---|
-| Sposób działania | Sync, request-response | Async, prześlij batch i odbierz później |
+| Działanie | Sync, request-response | Async, prześlij i odbierz |
 | Cena | 100% | **50%** |
-| Czas odpowiedzi | Sekundy | Zwykle 5 min – 1h, max 24h |
-| Maksymalna liczba requestów | 1 na wywołanie | **100 000 w jednym batchu** |
+| Czas odpowiedzi | Sekundy | <1h zwykle, max 24h |
+| Max requestów | 1 / wywołanie | **100 000** / batch |
 | Limit rozmiaru | brak | 256 MB |
-| Gwarancja czasowa | natychmiast | tylko górna granica (24h) |
-| Cache działa | ✅ | ✅ (jeśli requesty bliskie czasowo) |
+| Retencja wyników | natychmiast | 29 dni |
+| Cache działa | ✅ | ✅ best-effort (30-98% hit rate) |
 
 ---
 
-## Trzy decyzje, które trzeba podjąć przed użyciem Batch
+## Trzy decyzje przed użyciem Batch
 
-### 1. Czy wynik może poczekać?
+**1. Czy wynik może poczekać?** Czas przetwarzania niedeterministyczny — zwykle 5-60 min, max 24h. Workflow „audyt w niedzielę o 03:00, raport rano" → tak. Klient klika i czeka → nie.
 
-Realny czas przetwarzania batcha jest **niedeterministyczny**. Zwykle wyniki są gotowe w 5-30 minut, ale Anthropic gwarantuje tylko 24 godziny. Jeśli Twój workflow zakłada „audyt zaplanowany na poniedziałek o 03:00, raport gotowy do śniadania" — Batch to idealne narzędzie. Jeśli klient klika przycisk i czeka na ekranie — nie.
+**2. Czy masz wystarczająco dużo requestów?** Próg opłacalności: ~5 requestów (powyżej narzut się amortyzuje). Dla 1-2 — szybciej zwykłym API.
 
-### 2. Czy masz wystarczająco dużo requestów?
-
-Batch ma narzut: serializacja JSONL, upload, polling statusu, parsowanie wyników. Dla 1-2 requestów to dłużej niż zwykłe wywołanie. Próg opłacalności jest dwojaki:
-- **Czasowy**: ~5 requestów (powyżej narzut się amortyzuje)
-- **Kosztowy**: dowolna liczba, jeśli wartość 50% rabatu > Twój czas konfiguracji
-
-### 3. Czy wszystkie requesty są niezależne?
-
-Batch nie obsługuje sekwencji — każdy request widzi tylko swój własny prompt. Jeśli audyt podstrony B musi zacząć się od wyniku audytu podstrony A, to **nie jest** scenariusz dla Batch — to seria sync calls. Batch nadaje się do równoległych, niezależnych zadań.
+**3. Czy requesty są niezależne?** Batch nie obsługuje sekwencji — każdy request widzi tylko swój prompt. Nadaje się do równoległych, niezależnych zadań.
 
 ---
 
-## Format batcha — co właściwie wysyłasz
+## Format batcha
 
-Batch to plik JSONL, gdzie każda linia to osobny request o znanej strukturze:
+Plik JSONL, każda linia to osobny request:
 
 ```jsonl
 {"custom_id": "audit-home", "params": {"model": "claude-sonnet-4-6", "max_tokens": 4096, "messages": [{"role": "user", "content": "Audyt SEO: https://ntfy.pl/"}]}}
 {"custom_id": "audit-longevity", "params": {"model": "claude-sonnet-4-6", "max_tokens": 4096, "messages": [{"role": "user", "content": "Audyt SEO: https://ntfy.pl/longevity/"}]}}
-{"custom_id": "audit-rabat", "params": {"model": "claude-sonnet-4-6", "max_tokens": 4096, "messages": [{"role": "user", "content": "Audyt SEO: https://ntfy.pl/rabat/"}]}}
 ```
 
-Najważniejsze pole to **`custom_id`** — Twoje własne ID, po którym potem mapujesz wynik z powrotem na konkretną podstronę. Anthropic nie gwarantuje kolejności wyników, więc bez `custom_id` byś nie wiedział, który raport dotyczy której strony.
+**`custom_id`** = Twoje ID, po którym mapujesz wyniki. Anthropic nie gwarantuje kolejności, więc bez `custom_id` nie wiesz, który raport dotyczy której strony.
 
 ---
 
 ## Cykl życia batcha
 
 ```
-1. CREATE        → wysyłasz JSONL, dostajesz batch_id
-                   status: "in_progress"
-                                │
-2. PROCESSING    → Anthropic przetwarza równolegle (5min - 24h)
-                   możesz pollować status co N minut
-                                │
-3. ENDED         → wszystkie requesty zakończone
-                   status: "ended" lub "canceled" / "expired"
-                                │
-4. RETRIEVE      → pobierasz wyniki jako JSONL
-                   parsujesz po custom_id
-                                │
-5. CLEANUP       → wyniki dostępne do pobrania 29 dni, potem znikają
+CREATE  → JSONL → batch_id, status: "in_progress"
+PROCESS → Anthropic przetwarza równolegle (<1h zwykle, max 24h)
+ENDED   → status: "ended" / "canceled" / "expired"
+RETRIEVE→ pobierasz JSONL, parsujesz po custom_id
+CLEANUP → wyniki dostępne 29 dni
 ```
 
-Polling: nie pollujesz w sekundowej pętli — to marnotrawstwo. Sensowny interwał to **30-60 sekund** dla małych batchy, **5 minut** dla dużych.
+Polling: nie w sekundowej pętli. Sensownie **30-60 s** dla małych batchy, **5 min** dla dużych.
 
 ---
 
-## Praktyczny skrypt — audyt wielu podstron ntfy.pl
+## Praktyczny skrypt — audyt podstron ntfy.pl
 
 ```python
-"""
-scripts/batch-audit.py — audyt SEO wszystkich podstron ntfy.pl
-przez Batch API z włączonym cache.
-"""
-import json
+# scripts/batch-audit.py — audyt SEO przez Batch API z cache
 import time
 from pathlib import Path
 import anthropic
@@ -107,148 +84,87 @@ URLS = [
     "https://ntfy.pl/rabat/",
     "https://ntfy.pl/blog/",
     "https://ntfy.pl/o-nas/",
-    # ... dodaj resztę
 ]
 
-# ─── KROK 1: zbuduj requesty ────────────────────────────────────────
-requests = []
-for url in URLS:
-    custom_id = url.rstrip("/").split("/")[-1] or "home"
-    requests.append({
-        "custom_id": f"audit-{custom_id}",
-        "params": {
-            "model": "claude-sonnet-4-6",
-            "max_tokens": 4096,
-            "system": [
-                {
-                    "type": "text",
-                    "text": INSTRUCTIONS,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            "messages": [
-                {"role": "user", "content": f"Wykonaj audyt SEO strony: {url}"}
-            ],
-        },
-    })
+requests = [{
+    "custom_id": f"audit-{(u.rstrip('/').split('/')[-1] or 'home')}",
+    "params": {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 4096,
+        "system": [{"type": "text", "text": INSTRUCTIONS,
+                    "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
+        "messages": [{"role": "user", "content": f"Audyt SEO: {u}"}],
+    },
+} for u in URLS]
 
-# ─── KROK 2: wyślij batch ───────────────────────────────────────────
 batch = client.messages.batches.create(requests=requests)
-print(f"Batch utworzony: {batch.id}")
-print(f"Status: {batch.processing_status}")
+print(f"Batch {batch.id}, status: {batch.processing_status}")
 
-# ─── KROK 3: pollowanie statusu ─────────────────────────────────────
 while batch.processing_status == "in_progress":
-    print(f"  Przetwarzanie... {batch.request_counts}")
-    time.sleep(60)  # 1 minuta między pollami
+    print(f"  {batch.request_counts}")
+    time.sleep(60)
     batch = client.messages.batches.retrieve(batch.id)
 
-print(f"Batch zakończony: {batch.processing_status}")
-print(f"Wyniki: {batch.request_counts}")
-
-# ─── KROK 4: pobierz i zapisz wyniki ────────────────────────────────
 out_dir = Path("reports/batch")
 out_dir.mkdir(parents=True, exist_ok=True)
-
-for result in client.messages.batches.results(batch.id):
-    cid = result.custom_id
-    if result.result.type == "succeeded":
-        content = result.result.message.content[0].text
-        (out_dir / f"{cid}.md").write_text(content)
-        print(f"✓ {cid} → reports/batch/{cid}.md")
+for r in client.messages.batches.results(batch.id):
+    if r.result.type == "succeeded":
+        (out_dir / f"{r.custom_id}.md").write_text(r.result.message.content[0].text)
+        print(f"✓ {r.custom_id}")
     else:
-        print(f"✗ {cid}: {result.result.type}")
-
-# ─── KROK 5: podsumowanie kosztów ───────────────────────────────────
-print("\nBatch API kosztował 50% normalnej ceny synch API.")
-print("Plus cache na instrukcjach — efektywnie ~10% × 50% za prefix.")
+        print(f"✗ {r.custom_id}: {r.result.type}")
 ```
+
+**Uwaga**: dla Batch używaj `ttl: "1h"` cache — batch może trwać dłużej niż 5 min default TTL, co kasuje cache hit rate.
 
 ---
 
 ## Matematyka oszczędności — Batch + Cache
 
-Załóżmy audyt 20 podstron ntfy.pl. `seo-audit.md` to ~4600 tokenów instrukcji, każde pytanie ~200 tokenów, odpowiedź ~1000 tokenów.
+Audyt 20 podstron: `seo-audit.md` ~4600 tok. instrukcji, pytanie ~200 tok., odpowiedź ~1000 tok.
 
-| Wariant | Cena per audyt | Suma za 20 audytów |
-|---|---|---|
-| Sync, bez cache | 100% wejścia + 100% wyjścia | 100% × 20 = **2000%** |
-| Sync, z cache | 125%/10% wejścia + 100% wyjścia (per audyt) | ~**540%** |
-| Batch, bez cache | 50% wszystkiego | 50% × 20 = **1000%** |
-| **Batch + cache** | 50% × (125%/10% + 100%) | ~**270%** |
+| Wariant | Suma za 20 audytów |
+|---|---|
+| Sync, bez cache | **2000%** |
+| Sync, z cache | ~**540%** |
+| Batch, bez cache | **1000%** |
+| **Batch + cache** | ~**270%** |
 
-Skala: **redukcja ~86%** względem najgorszego wariantu. Cache i Batch działają multiplikatywnie, nie addytywnie — to dlatego są wymieniane razem w backlogu.
-
----
-
-## Kiedy Batch a kiedy subagenci
-
-To są dwa różne narzędzia do podobnie wyglądającego problemu („zrób 20 rzeczy naraz"), ale ekonomicznie zupełnie inne:
-
-| Wymiar | Subagenci (w sesji) | Batch API (skrypt) |
-|---|---|---|
-| Gdzie działają | W Twojej sesji Claude Code | Na serwerach Anthropica, async |
-| Cena | 100% (standard) | 50% |
-| Czas wyniku | Sekundy-minuty | 5min - 24h |
-| Limit liczby | ~10 równoległych | 100 000 |
-| Twój udział | Widzisz wyniki w sesji | Musisz pollować skryptem |
-| Idealne dla | Interaktywne, średnia skala | Bulk, wielka skala, asynchroniczne |
-
-**Reguła praktyczna:** jeśli siedzisz przy terminalu i chcesz natychmiastowy wynik na 5-10 podstron → subagenci. Jeśli planujesz cykliczny audyt 100+ podstron i nie pilisz się z wynikiem → Batch.
+Redukcja **~86%** względem najgorszego wariantu. Cache i Batch działają multiplikatywnie.
 
 ---
 
-## Kiedy Batch a kiedy `/schedule` (rutyny)
+## Batch vs subagenci vs `/schedule`
 
-Te dwa narzędzia są często mylone, bo oba są „nie tu i teraz". Różnica jest fundamentalna:
+| Wymiar | Subagenci | Batch API | `/schedule` |
+|---|---|---|---|
+| Gdzie | W sesji Claude Code | Serwery Anthropic, async | Cron Anthropic |
+| Cena | 100% | 50% | 100% |
+| Czas wyniku | Sekundy-minuty | <1h zwykle | natychmiast (gdy odpalony) |
+| Limit | ~10 równolegle | 100 000 | 1 agent na trigger |
+| Idealny case | Interaktywne, 5-10 podstron | Bulk 100+, async | Cykliczne wykonanie |
 
-| Wymiar | Batch API | `/schedule` (rutyna) |
-|---|---|---|
-| Co uruchamia | Wiele requestów naraz | Jednego agenta |
-| Trigger | Twój skrypt | Cron na serwerach Anthropic |
-| Częstotliwość | Jednorazowo (per batch) | Cyklicznie (np. co poniedziałek) |
-| Inteligencja | Niska — surowe wywołania API | Wysoka — pełny agent z toolami |
-| Idealny case | Audytuj 100 stron jednorazowo | Co tydzień audytuj 1 stronę |
-
-Można je **łączyć**: rutyna uruchamiana co poniedziałek o 03:00, wewnątrz której agent generuje listę URL-i i odpala Batch API. To najwyższy poziom optymalizacji w tym projekcie — automatyczny, masowy, najtańszy.
+Można **łączyć**: rutyna `/schedule` co poniedziałek o 03:00 wewnątrz generuje listę URL-i i odpala Batch API z cache. Najwyższy poziom optymalizacji.
 
 ---
 
 ## Pułapki
 
-**1. JSONL musi być poprawny syntaktycznie** — jedna źle sformatowana linia odrzuci cały batch. Walidator: każda linia powinna być parsowalnym JSON-em i mieć pola `custom_id` + `params`.
-
-**2. `custom_id` musi być unikalny w obrębie batcha** — duplikat = błąd. Bezpieczna konwencja: prefiks + hash URL-a.
-
-**3. Wyniki nie zachowują kolejności wysłania** — zawsze mapuj po `custom_id`, nie po indeksie.
-
-**4. Niektóre requesty w batchu mogą zawodzić** — Batch nie jest „all-or-nothing". Sprawdzaj `result.result.type` per request: może być `succeeded`, `errored`, `canceled` lub `expired`.
-
-**5. Token API musi mieć włączony Batch** — niektóre konta organizacyjne mają to wyłączone domyślnie. Sprawdź console.anthropic.com → Settings.
-
-**6. Cache w Batchu działa tylko, jeśli requesty są bliskie czasowo** — gdy Anthropic rozproszy batch po 6 godzinach, środkowe requesty mogą trafić w pusty cache. To rzadkość, ale możliwa.
+1. **JSONL musi być poprawny syntaktycznie** — jedna źle sformatowana linia odrzuca cały batch
+2. **`custom_id` musi być unikalny w batchu** — duplikat = błąd; bezpiecznie: prefiks + hash URL-a
+3. **Wyniki nie zachowują kolejności wysłania** — zawsze mapuj po `custom_id`
+4. **Niektóre requesty mogą zawieść** — sprawdzaj `result.type`: `succeeded` / `errored` / `canceled` / `expired`
+5. **Cache hit best-effort** — typowo 30-98%, dla shared context użyj `ttl: "1h"`
+6. **`max_tokens: 0` (pre-warming cache) NIE działa w batchu** — wymaga ≥ 1
 
 ---
 
 ## Co warto zapamiętać
 
-1. **50% rabatu w zamian za elastyczność czasową** — jeśli możesz poczekać 30 minut, płacisz połowę
-2. **Batch + Cache multiplikatywnie** — łączny efekt: redukcja kosztu o ~80-90% w typowych scenariuszach masowych
-3. **Async to nie zawsze plus** — narzut konfiguracji nie opłaca się przy 1-2 requestach
-4. **`custom_id` to Twoja kotwica** — bez niego nie powiążesz wyników z requestami
-5. **Batch ≠ subagenci ≠ rutyny** — trzy różne narzędzia do trzech różnych problemów
+1. **50% rabatu w zamian za elastyczność czasową** — możesz poczekać 30 min → płacisz połowę
+2. **Batch + Cache multiplikatywnie** — łączny efekt: redukcja kosztu ~80-90%
+3. **Async to nie zawsze plus** — narzut nie opłaca się przy 1-2 requestach
+4. **`custom_id` to Twoja kotwica** — bez niego nie powiążesz wyników
+5. **Dla batchy używaj TTL 1h** — batch trwa zwykle dłużej niż 5 min default cache
 
----
-
-## Co dalej w tym projekcie
-
-Naturalny krok następny: **napisz `scripts/batch-audit.py` i przetestuj go na 5 podstronach ntfy.pl**. Cel ćwiczeniowy nie jest „obniżyć rachunek" (przy 5 podstronach oszczędność to grosze), tylko **poczuć cykl async**: utworzenie batcha, polling, parsowanie wyników. Gdy zrozumiesz mechanikę na małej skali, przejście do 100 podstron jest trywialne.
-
-Po Batch API backlog wyczerpany. Logiczna kontynuacja to **połączenie wszystkich pięciu tematów** w jeden zaawansowany pipeline:
-- Rutyna co poniedziałek (punkt 3)
-- Rutyna generuje listę podstron (subagenci, punkt 1)
-- Wysyła Batch API z cache (punkty 4 + 5)
-- Opus 4.7 z thinking analizuje wyniki porównawczo (punkt 2)
-- Commit + push raportu zbiorczego
-
-To jest właściwa skala dojrzałości Claude Code: nie jedna funkcjonalność, tylko ich kompozycja.
+Naturalna kontynuacja: napisz `scripts/batch-audit.py` i przetestuj na 5 podstronach ntfy.pl. Cel nie jest „obniżyć rachunek" (przy 5 podstronach to grosze), tylko **poczuć cykl async**: create → polling → parse. Gdy zrozumiesz mechanikę, skok do 100 podstron jest trywialny.
