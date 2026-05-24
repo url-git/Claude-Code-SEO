@@ -1,187 +1,234 @@
-# Prompt Caching — szybsze i tańsze powtórne audyty
+# Prompt Caching — wersja Opus 4.7
+
+> Ten plik powstał na modelu **Opus 4.7** dla porównania z `prompt-caching.md` napisanym przez Sonnet 4.6. Treść tematycznie ta sama, ale możesz zobaczyć, jak różni się głębia ujęcia, struktura argumentacji i konkrety praktyczne.
+
+---
 
 > ## Kiedy ta wiedza jest Ci potrzebna?
 >
-> | Scenariusz | Czy musisz konfigurować cache? |
-> |---|---|
-> | Używasz Claude Code w terminalu | ❌ Nie — działa automatycznie |
-> | Piszesz własne komendy slash (`/seo-audit`) | ❌ Nie — Claude Code kesuje za Ciebie |
-> | Piszesz skrypt Python z `anthropic.Anthropic()` | ✅ Tak — dodaj `cache_control` ręcznie |
-> | Stawiasz własną usługę (Cloud Run, Cloud Functions, Lambda) | ✅ Tak — to decyzja architektoniczna i kosztowa |
-> | Robisz Batch API dla wielu audytów | ✅ Tak — cache + batch = największe oszczędności |
+> | Scenariusz | Czy musisz konfigurować cache? | Dlaczego |
+> |---|---|---|
+> | Claude Code w terminalu | ❌ Nie | Anthropic kesuje automatycznie pod maską |
+> | Własne komendy slash (`/seo-audit`) | ❌ Nie | To nadal Claude Code — działa autocache |
+> | Skrypt Python z `anthropic.Anthropic()` | ✅ Tak | Bez `cache_control` cache nie powstaje |
+> | Usługa na Cloud Run / Cloud Functions / Lambda | ✅ **Tak — kluczowe** | Każdy request usługi = osobne wywołanie API; bez cache koszty rosną liniowo z ruchem |
+> | Batch API (wiele audytów naraz) | ✅ Tak | Cache + batch = największa redukcja kosztu |
 >
-> Innymi słowy: w codziennej pracy z Claude Code możesz traktować to jako ciekawostkę. Gdy zaczniesz pisać własne aplikacje wołające API Anthropica — to przestaje być teoria.
+> **Niuans dla serverless:** cache żyje po stronie Anthropica, nie Twojej. Zimny start Cloud Run, nowa instancja kontenera, request trafiający do innego node'a — cache i tak działa, bo jest powiązany z kombinacją (API key + treść prefiksu), a nie z Twoją infrastrukturą.
+>
+> Krótko: **w terminalu — ciekawostka. We własnej aplikacji wołającej API — decyzja architektoniczna z bezpośrednim wpływem na rachunek.**
 
 ---
 
-Prompt Caching to mechanizm, w którym API Anthropica zapamiętuje część kontekstu między wywołaniami i nie przetwarza go ponownie. Zamiast płacić pełną cenę za każdy token przy każdym wywołaniu, powtarzające się fragmenty (instrukcje, dokumenty, system prompt) są odczytywane z cache — taniej i szybciej.
+## Czym właściwie jest prompt caching — model mentalny
+
+Standardowo każde wywołanie API to świeży start: model dostaje cały kontekst (system prompt, historia, dokumenty) i przetwarza go od zera. To jak otwieranie tej samej grubej książki za każdym razem, gdy chcesz zadać jedno pytanie.
+
+Prompt caching odwraca tę logikę: pierwsze wywołanie buduje na serwerze migawkę stanu modelu **po przeczytaniu Twojego długiego kontekstu**. Kolejne wywołania nie czytają książki na nowo — startują od tej migawki i dodają tylko nowe pytanie. To dlatego cache hit kosztuje ~10% zwykłej stawki: serwer pomija najdroższy etap (atencję nad całym kontekstem) i wraca do gotowego stanu.
+
+Konsekwencja praktyczna: cache opłaca się tym bardziej, im **większy stosunek stałej części do zmiennej**. Audyt SEO ntfy.pl ma idealne proporcje — 4600 tokenów stałych instrukcji vs 50 tokenów zmiennego URL-a. Stosunek 90:1.
 
 ---
 
-## Jak to działa
+## Trzy parametry, które trzeba zrozumieć
 
-Przy pierwszym wywołaniu API przetwarza cały kontekst normalnie i zapisuje wskazane fragmenty w cache. Przy kolejnych wywołaniach, jeśli cache jest aktualny, te fragmenty są pomijane w obliczeniach — API zwraca odpowiedź szybciej i pobiera niższą opłatę.
-
-| | Bez cache | Z cache (cache hit) |
+| Parametr | Wartość | Co oznacza |
 |---|---|---|
-| Koszt tokenów wejściowych | 100% | ~10% |
-| Czas przetwarzania | Pełny | Znacznie krótszy |
-| Kiedy działa | Zawsze | Gdy kontekst się nie zmienił |
-| TTL (czas życia cache) | — | 5 minut |
+| **Minimalna długość** | ~1024 tokeny (Sonnet/Opus) | Krótsze fragmenty nie są keszowane — API zignoruje `cache_control` |
+| **TTL** | 5 minut (standard), 1 godzina (beta) | Czas od **ostatniego** użycia, nie od utworzenia. Każdy cache hit resetuje licznik |
+| **Koszt zapisu** | 125% zwykłej stawki | Pierwsze wywołanie **droższe** niż bez cache — to inwestycja |
 
-Cache wygasa po **5 minutach bezczynności**. Jeśli przerwa między wywołaniami jest dłuższa, cache jest zimny i pierwsze wywołanie płaci pełną cenę — po czym cache znów się tworzy.
+Trzeci punkt jest często przegapiany: cache **nie jest darmowy**. Jeśli wykonasz tylko jedno wywołanie i cache nigdy nie zostanie odczytany — przepłaciłeś o 25%. Break-even przy standardowej cenie wynosi **2 wywołania w ciągu TTL**. Trzecie i każde kolejne to czysta oszczędność.
+
+```
+Wywołanie 1: 1.25× (zapis cache)
+Wywołanie 2: 0.10× (odczyt)  → razem 1.35× zamiast 2.00× — oszczędność 32%
+Wywołanie 3: 0.10× (odczyt)  → razem 1.45× zamiast 3.00× — oszczędność 52%
+Wywołanie 10: 0.10× × 9 = 0.9 + 1.25 = 2.15× zamiast 10.00× — oszczędność 78%
+```
 
 ---
 
-## Co się nadaje do keszowania
+## Jak działa kolejność cache breakpoints (rzecz, o której Sonnet milczy)
 
-Cache opłaca się dla fragmentów, które:
-- są **długie** (setki linii)
-- **nie zmieniają się** między wywołaniami
-- powtarzają się **wielokrotnie w jednej sesji**
+Możesz ustawić do **4 breakpointów** w jednym wywołaniu — każdy wyznacza prefix do keszowania. Działa to kaskadowo: gdy zmieni się fragment przy breakpoincie #2, prefix do #1 dalej trafi z cache, ale od #2 w górę musi być przeliczony od nowa.
 
-W tym projekcie idealnym kandydatem jest **`seo-audit.md`** — ma ponad 350 linii instrukcji, które są identyczne przy każdym uruchomieniu audytu. Przy trzech audytach z rzędu w ciągu 5 minut płacisz pełną cenę tylko raz.
+W audycie SEO daje to projekt warstwowy:
 
-Złe kandydaty: dane, które zmieniają się przy każdym wywołaniu (wyniki fetch strony, datowane raporty, historia rozmowy).
+```
+[breakpoint 1] system prompt + seo-audit.md         ← najbardziej stabilne
+[breakpoint 2] kontekst projektu (CLAUDE.md)        ← rzadko się zmienia
+[breakpoint 3] poprzedni raport ntfy-pl-…           ← zmienia się co tydzień
+                                                       (bez breakpointu)
+   wiadomość użytkownika: "audytuj URL X"             ← zmienne, nigdy nie keszowane
+```
+
+Im głębiej w hierarchii zmiana, tym mniej cache się unieważnia. Dlatego **kolejność ma znaczenie**: stałe na samym początku, zmienne na końcu.
 
 ---
 
-## Prompt Caching w Claude Code (automatyczny)
+## Kiedy cache się myli (czyli kiedy nie pomaga)
 
-W sesji interaktywnej Claude Code **włącza cache automatycznie** dla długich system promptów i plików wczytanych do kontekstu. Nie musisz nic konfigurować — działa z `CLAUDE.md`, wczytanymi plikami przez `@` i zawartością komend slash.
+Sonnet napisał o pułapkach, ale nie zhierarchizował ich. Z mojej perspektywy:
 
-Żeby zobaczyć, czy cache działa, uruchom audyt kilka razy z rzędu:
+**Krytyczne (cache nie zadziała wcale):**
+1. Fragment poniżej 1024 tokenów — API milcząco ignoruje `cache_control`
+2. Pierwsze wywołanie po >5 min przerwy — TTL wygasł
+3. Jakikolwiek znak różnicy w prefiksie — nawet whitespace lub data w komentarzu
 
-```
-/seo-audit
-/seo-audit
-/seo-audit
-```
+**Istotne (cache działa, ale ekonomicznie wątpliwie):**
+4. Tylko 1-2 wywołania na sesję — break-even niedociągnięty
+5. Bardzo krótkie sesje (1-2 audyty raz dziennie) — TTL wygasa między wywołaniami
+6. Dane zmienne wstawione w środek prefiksu — wszystko od tego miejsca w górę przelicza się od nowa
 
-Drugie i trzecie wywołanie powinny być zauważalnie szybsze — to znak, że instrukcje z `seo-audit.md` są serwowane z cache.
+**Subtelne (łatwo przegapić):**
+7. Streaming kasuje statystyki — jeśli używasz streamingu, `usage` nie zawiera danych cache w niektórych SDK
+8. Cache jest per-API-key — różne klucze nie współdzielą cache, nawet dla identycznego promptu
+9. Tryb thinking (Extended) tworzy osobny cache niż tryb standardowy
+
+Punkt 9 wiąże się bezpośrednio z poprzednim tematem w backlogu: jeśli używasz Opus 4.7 z Extended Thinking dla strategicznej analizy raportów, a Sonneta dla rutynowych audytów — masz **dwa niezależne cache** mimo identycznych instrukcji. To nie jest błąd projektowy, tylko świadoma decyzja Anthropica (różne modele = różne wewnętrzne reprezentacje).
 
 ---
 
-## Prompt Caching przez API (skrypt Python)
+## Praktyczny scenariusz, którego Sonnet nie pokazał
 
-Gdy wywołujesz Claude przez API (np. skrypt `batch-audit.py`), musisz **jawnie oznaczyć** fragmenty do keszowania przez `cache_control`. API zwraca wtedy statystyki cache w odpowiedzi.
+Załóżmy, że co poniedziałek `/schedule` uruchamia audyt ntfy.pl. Raz w tygodniu, zimny start, jedno wywołanie. **Cache nie pomaga w ogóle** — w tym scenariuszu rezygnujesz z `cache_control`, bo płacisz 125% za nic.
 
-### Instalacja SDK
-
-```bash
-pip install anthropic
-```
-
-### Przykładowy skrypt — audyt z cache
+Ale gdy audytujesz **wiele podstron** w tej samej sesji `/schedule`:
 
 ```python
+SUBSTRONY = [
+    "https://ntfy.pl/",
+    "https://ntfy.pl/longevity/",
+    "https://ntfy.pl/rabat/",
+    "https://ntfy.pl/blog/",
+    "https://ntfy.pl/o-nas/",
+]
+
+for url in SUBSTRONY:
+    run_audit(url)  # 5 wywołań w ciągu ~2 minut
+```
+
+Oszczędność:
+- Bez cache: 5 × 4800 = 24 000 tokenów wejściowych
+- Z cache: 1.25 × 4650 + 4 × 465 + 5 × 200 = 5812 + 1860 + 1000 = **8672 tokenów**
+- Redukcja: **64%**
+
+Wniosek strategiczny: **cache nie opłaca się przy pojedynczych audytach, ale staje się obowiązkowy przy audytach multi-page**. To naturalnie prowadzi do tematu subagentów (punkt 1 backlogu) — równoległe audyty wielu podstron to dokładnie scenariusz, w którym cache świeci.
+
+---
+
+## Skrypt diagnostyczny — bardziej kompletny
+
+```python
+"""
+scripts/cache-diagnose.py — mierzy realną oszczędność cache
+dla audytu SEO multi-page.
+"""
 import anthropic
+import time
 from pathlib import Path
+from dataclasses import dataclass
 
 client = anthropic.Anthropic()
+INSTRUCTIONS = Path(".claude/commands/seo-audit.md").read_text()
 
-# Wczytaj instrukcje audytu — to będzie keszowane
-audit_instructions = Path(".claude/commands/seo-audit.md").read_text()
+@dataclass
+class CallStats:
+    input_tokens: int
+    cache_read: int
+    cache_write: int
+    output_tokens: int
+    duration_s: float
 
-def run_audit(url: str) -> dict:
+    @property
+    def billed_input(self) -> float:
+        """Efektywne tokeny wejściowe po uwzględnieniu cache."""
+        return self.cache_write * 1.25 + self.cache_read * 0.10 + self.input_tokens
+
+def audit(url: str) -> CallStats:
+    t0 = time.time()
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-opus-4-7",  # użyj Opus, by zobaczyć cache w trybie thinking
         max_tokens=4096,
         system=[
             {
                 "type": "text",
-                "text": audit_instructions,
-                "cache_control": {"type": "ephemeral"}  # oznacz do keszowania
+                "text": INSTRUCTIONS,
+                "cache_control": {"type": "ephemeral"},
             }
         ],
-        messages=[
-            {
-                "role": "user",
-                "content": f"Wykonaj audyt SEO strony: {url}"
-            }
-        ]
+        messages=[{"role": "user", "content": f"Audyt SEO: {url}"}],
+    )
+    u = response.usage
+    return CallStats(
+        input_tokens=u.input_tokens,
+        cache_read=u.cache_read_input_tokens,
+        cache_write=u.cache_creation_input_tokens,
+        output_tokens=u.output_tokens,
+        duration_s=time.time() - t0,
     )
 
-    usage = response.usage
-    print(f"Tokeny wejściowe:     {usage.input_tokens}")
-    print(f"Z cache (odczyt):     {usage.cache_read_input_tokens}")
-    print(f"Zapisane do cache:    {usage.cache_creation_input_tokens}")
-    print(f"Tokeny wyjściowe:     {usage.output_tokens}")
+def main():
+    urls = [
+        "https://ntfy.pl/",
+        "https://ntfy.pl/longevity/",
+        "https://ntfy.pl/rabat/",
+    ]
 
-    return {
-        "content": response.content[0].text,
-        "cache_hit": usage.cache_read_input_tokens > 0
-    }
+    total_without_cache = 0
+    total_with_cache = 0
+
+    for i, url in enumerate(urls, 1):
+        s = audit(url)
+        without = s.input_tokens + s.cache_read + s.cache_write
+        with_ = s.billed_input
+
+        total_without_cache += without
+        total_with_cache += with_
+
+        print(f"#{i} {url}")
+        print(f"   czas:               {s.duration_s:.1f}s")
+        print(f"   bez cache:          {without:>6} tokenów")
+        print(f"   z cache (efektywne): {with_:>6.0f} tokenów")
+        print(f"   oszczędność:        {(1 - with_/without)*100:>5.1f}%\n")
+
+    print(f"SUMA bez cache:  {total_without_cache:>6} tokenów")
+    print(f"SUMA z cache:    {total_with_cache:>6.0f} tokenów")
+    print(f"REDUKCJA:        {(1 - total_with_cache/total_without_cache)*100:>5.1f}%")
 
 if __name__ == "__main__":
-    print("=== Wywołanie 1 (zimny cache) ===")
-    result1 = run_audit("https://ntfy.pl/")
-
-    print("\n=== Wywołanie 2 (ciepły cache) ===")
-    result2 = run_audit("https://ntfy.pl/longevity/")
-
-    print("\n=== Wywołanie 3 (ciepły cache) ===")
-    result3 = run_audit("https://ntfy.pl/rabat/")
+    main()
 ```
 
-### Co zobaczysz w wynikach
-
-**Wywołanie 1 (zimny cache):**
-```
-Tokeny wejściowe:     4821
-Z cache (odczyt):     0
-Zapisane do cache:    4650    ← instrukcje zapisane
-Tokeny wyjściowe:     892
-```
-
-**Wywołanie 2 (ciepły cache):**
-```
-Tokeny wejściowe:     171
-Z cache (odczyt):     4650    ← instrukcje z cache, nie liczone normalnie
-Zapisane do cache:    0
-Tokeny wyjściowe:     876
-```
-
-Przy drugim i trzecim wywołaniu płacisz tylko za 171 tokenów (samo pytanie) zamiast za 4821. Instrukcje audytu są keszowane i kosztują ~10% normalnej stawki.
+Różnica względem przykładu Sonneta: liczę **efektywny koszt** (z mnożnikami 1.25× i 0.10×), a nie surowe tokeny. Surowe liczby pokazują "ile cache odczytano", ale nie odpowiadają na pytanie "ile zapłaciłem".
 
 ---
 
-## Ile można zaoszczędzić
+## Co warto zapamiętać
 
-Dla `seo-audit.md` (~4600 tokenów instrukcji), audyt 10 podstron w ciągu 5 minut:
-
-| | Bez cache | Z cache |
-|---|---|---|
-| Tokeny wejściowe per audyt | 4800 | 200 + 460 (cache) |
-| Łącznie za 10 audytów | 48 000 | 6 600 |
-| Szacunkowy koszt (Sonnet) | ~$0.14 | ~$0.03 |
-
-Oszczędność rośnie proporcjonalnie do liczby audytów i długości instrukcji.
+1. **Cache to inwestycja, nie automatyczny zysk** — pierwsze wywołanie kosztuje 125%, break-even przy drugim
+2. **Kolejność breakpointów odwzorowuje stabilność** — najstabilniejsze na początku
+3. **5 minut to nie 5 minut od utworzenia, tylko od ostatniego użycia** — aktywne sesje samoodnawiają cache
+4. **Cache jest osobny per model i per tryb** — Opus thinking i Sonnet to dwa różne cache
+5. **Realna oszczędność liczy się efektywnymi tokenami (×1.25 / ×0.10)**, nie surowymi liczbami z `usage`
 
 ---
 
-## Praktyczne ćwiczenie
+## Co dalej w projekcie
 
-1. Zapisz skrypt powyżej jako `scripts/cache-test.py`
-2. Uruchom: `python scripts/cache-test.py`
-3. Sprawdź pole `cache_read_input_tokens` w każdym wywołaniu
-4. Odczekaj 6 minut i uruchom ponownie — cache wygasł, `cache_read_input_tokens` wróci do zera
-5. Porównaj czas odpowiedzi między zimnym a ciepłym cache
+Naturalna kontynuacja to **Batch API** (punkt 5 backlogu). Batch wywołuje wiele requestów asynchronicznie z 50% rabatem cenowym, a cache działa też wewnątrz batcha — efekty się składają. Audyt 20 podstron ntfy.pl w batchu z cache to praktycznie najtańszy możliwy sposób skanowania całego serwisu.
 
 ---
 
-## Pułapki
+## Notatka do porównania z wersją Sonneta
 
-**Cache wygasa po 5 minutach** — jeśli Twój workflow ma dłuższe przerwy między wywołaniami, cache nie pomoże. Rozwiązanie: grupuj wywołania, używaj Batch API (następny temat w backlogu).
+Czytając oba pliki obok siebie, zwróć uwagę na:
 
-**Cache nie działa, jeśli kontekst się zmienia** — nawet jedna różna linia w system prompcie tworzy nowy cache. Trzymaj instrukcje stabilne, a zmienne dane (URL, data) przekazuj w wiadomości użytkownika, nie w system prompcie.
+- **Strukturę argumentacji**: Sonnet listuje fakty; Opus buduje model mentalny, potem na nim opiera szczegóły
+- **Hierarchizację**: Sonnet podaje pułapki jako bullet list; Opus dzieli je na krytyczne / istotne / subtelne
+- **Liczby**: Sonnet pokazuje surowe tokeny; Opus liczy break-even i efektywny koszt
+- **Połączenia**: Sonnet wspomina o innych tematach na końcu; Opus pokazuje, jak cache mechanicznie sprzęga się z subagentami i `/schedule`
+- **Zakres**: Opus dorzuca rzeczy, których Sonnet nie ruszył — koszt zapisu 125%, cache breakpoints, różnice między modelami, streaming gubiący stats
 
-**`cache_control` musisz dodać ręcznie w API** — w sesji interaktywnej Claude Code robi to za Ciebie. Przy skryptach Python — musisz to oznaczyć sam.
-
----
-
-## Związek z innymi tematami
-
-- **Batch API** (punkt 5 backlogu) — batch wywołuje wiele requestów asynchronicznie; cache działa też w batchu, jeśli wywołania są bliskie czasowo
-- **Extended Thinking** — Opus z thinking zużywa więcej tokenów; cache na instrukcjach częściowo kompensuje ten koszt
-- **`/schedule`** — zaplanowany agent startuje na zimno, więc pierwsze wywołanie zawsze płaci pełną cenę; cache zaczyna działać od drugiego wywołania w tej samej sesji agenta
+To nie jest "Opus lepszy, Sonnet gorszy" — to **dwa różne profile zwrotu z inwestycji w model**. Dla notatki o cache Opus daje więcej, ale za 3-4× wyższy koszt. Sonneta wystarczy do większości codziennych zadań.
