@@ -2,9 +2,9 @@
 
 ## Czym są skile?
 
-Skill (skil) to plik `SKILL.md` w dedykowanym katalogu, który definiuje własną komendę slash w Claude Code. Tworzysz plik `.claude/skills/nazwa/SKILL.md` i od razu możesz wywołać `/nazwa` w sesji — Claude automatycznie wczyta jego zawartość jako instrukcję.
+Plik `SKILL.md` w `.claude/skills/nazwa/`, który definiuje własną komendę slash. Tworzysz plik i od razu możesz wywołać `/nazwa` — Claude wczyta zawartość jako instrukcję.
 
-Skile rozwiązują konkretny problem: zamiast opisywać Claude'owi za każdym razem jak przeprowadzić audyt SEO, zapisujesz to raz i wywołujesz jedną komendą.
+Skile rozwiązują konkretny problem: zamiast opisywać Claude'owi audyt SEO za każdym razem, zapisujesz raz i wywołujesz jedną komendą.
 
 ---
 
@@ -24,155 +24,119 @@ model: haiku
 # Treść instrukcji dla Claude...
 ```
 
-Żadne pole frontmattera nie jest obowiązkowe — nazwę komendy Claude bierze z nazwy katalogu. `description` jest jednak mocno zalecany.
+Żadne pole frontmattera nie jest obowiązkowe — nazwę komendy Claude bierze z nazwy katalogu. `description` jest mocno zalecany.
 
 | Pole | Wymagany | Opis |
-|------|----------|------|
-| `name` | Nie | Nadpisuje nazwę katalogu jako nazwę komendy. Jeśli pominięty, używana jest nazwa katalogu. |
-| `description` | Zalecany | Opis używany przez Claude do automatycznego dopasowania skila do zapytania |
-| `allowed-tools` | Nie | Narzędzia, których Claude może używać bez pytania o zgodę gdy skil jest aktywny |
-| `model` | Nie | Model Claude dla tego skila (`haiku`, `sonnet`, `opus`) |
+|---|---|---|
+| `name` | Nie | Nadpisuje nazwę katalogu |
+| `description` | Zalecany | Używany do dopasowania skila do zapytania |
+| `allowed-tools` | Nie | Narzędzia bez pytania o zgodę gdy skil aktywny |
+| `model` | Nie | `haiku` / `sonnet` / `opus` |
 
 ---
 
-## Jak pisać dobry opis (`description`)
+## Jak pisać dobry `description`
 
-Opis odpowiada na dwa pytania: *co robi skil?* i *kiedy Claude powinien go użyć?*
+Opis odpowiada na: *co robi skil?* i *kiedy Claude ma go użyć?* Claude dopasowuje skile do zapytań po opisie — im więcej słów kluczowych z typowych zapytań, tym lepsze trafienie.
 
-Claude dopasowuje skile do zapytań użytkownika na podstawie opisu — im więcej słów kluczowych pasujących do typowych zapytań, tym lepsze dopasowanie. Zbyt ogólny opis sprawia, że skil się nie włącza gdy trzeba.
-
-**Przykład słabego opisu:**
+**Słaby:**
 ```
 description: Audyt SEO.
 ```
 
-**Przykład dobrego opisu:**
+**Dobry:**
 ```
 description: Przeprowadza równoległe audyty SEO wielu podstron ntfy.pl przy użyciu
   subagentów. Użyj gdy użytkownik mówi "audytuj podstrony", "sprawdź wszystkie strony",
-  "audyt wielu stron", "wszystkie podstrony", lub chce sprawdzić więcej niż jeden URL
-  jednocześnie.
+  "audyt wielu stron", lub chce sprawdzić więcej niż jeden URL jednocześnie.
 ```
 
-Skoro sesja toczy się po polsku, opis po polsku działa równie dobrze jak angielski —
-Claude dopasowuje skil do tego, co faktycznie piszesz w rozmowie.
+Opis po polsku działa równie dobrze — Claude dopasowuje do tego, co piszesz w rozmowie.
 
 ---
 
-## Co widzi główna sesja — skąd Claude wie o skillu?
+## Skąd Claude wie o skillu? — `system-reminder`
 
-Zanim Claude wywoła skilla, musi o nim wiedzieć. Główna sesja ma w kontekście cztery źródła:
+Główna sesja ma w kontekście cztery źródła:
 
 | Źródło | Co zawiera | Kto wstrzykuje |
-|--------|------------|----------------|
-| **CLAUDE.md** | Instrukcje projektu, struktura folderów | Ty (plik w repo) |
-| **settings.json** | Uprawnienia, MCP, zmienne env | Ty (plik konfiguracyjny) |
+|---|---|---|
+| **CLAUDE.md** | Instrukcje projektu, struktura | Ty (plik w repo) |
+| **settings.json** | Uprawnienia, MCP, env | Ty |
 | **MEMORY.md** | Pamięć z poprzednich sesji | Claude automatycznie |
-| **system-reminder** | Lista dostępnych skilli z triggerami | Harness automatycznie |
+| **system-reminder** | Lista skilli z triggerami | Harness automatycznie |
 
-### Czym jest system-reminder?
+`system-reminder` to niewidoczny blok wstrzykiwany przez harness — zawiera listę dostępnych skilli z opisami i triggerami. Dlatego Claude "sam z siebie" wie kiedy wywołać `/audit-subpages` — bo system-reminder mówi mu *"użyj gdy użytkownik mówi: audytuj podstrony..."*.
 
-`system-reminder` to niewidoczny blok tekstu, który harness Claude Code wstrzykuje do kontekstu sesji automatycznie — nie piszesz go, nie widzisz go w rozmowie, ale Claude go otrzymuje. Zawiera m.in.:
-
-- listę dostępnych skilli z ich opisami i triggerami
-- listę dostępnych agentów z opisami
-- aktualną datę
-- inne metadane sesji
-
-Właśnie dlatego Claude "sam z siebie" wie kiedy wywołać `/audit-subpages` — bo system-reminder mówi mu: *"użyj gdy użytkownik mówi: audytuj podstrony, sprawdź wszystkie strony..."*. Claude dopasowuje to do Twojego zapytania bez żadnej Twojej instrukcji.
-
-### Dlaczego subagenci tego nie mają?
-
-Wbudowane subagenty (Explore, Plan, General-purpose) dostają **wąski prompt zadania** — bez CLAUDE.md projektu, bez system-remindera z listą skilli. Technicznie mają narzędzie `Skill`, ale nie wiedzą jakie skille istnieją ani kiedy je wywołać. Dlatego nie używają skilli automatycznie.
-
-Custom agent z `skills:` w frontmatterze omija ten problem inaczej — treść skilli jest wstrzyknięta do jego kontekstu od startu, niezależnie od system-remindera.
+**Subagenci tego nie dostają** — wbudowane (Explore, Plan, General) startują z wąskim promptem zadania, bez listy skilli. Technicznie mają narzędzie `Skill`, ale nie wiedzą jakie skille istnieją. Custom agent z `skills:` w frontmatterze omija to — treść skilli wstrzyknięta od startu.
 
 ---
 
-## `allowed-tools` — po co ograniczać narzędzia?
+## `allowed-tools` — po co ograniczać
 
-Domyślnie Claude ma dostęp do wszystkich narzędzi. `allowed-tools` ogranicza dostęp wyłącznie do listy, którą podasz.
+Domyślnie Claude ma dostęp do wszystkich narzędzi. `allowed-tools` ogranicza dostęp do listy. **Dwie korzyści:** bezpieczeństwo (skil do raportów nie powinien móc edytować kodu) + czytelność intencji.
 
-**Dwie korzyści:**
+### Jak dobieramy w tym projekcie
 
-1. **Bezpieczeństwo** — skil do czytania raportów nie powinien móc uruchamiać przeglądarki Playwright ani modyfikować kodu. Jawna lista narzędzi chroni przed przypadkowym użyciem.
-
-2. **Czytelność intencji** — patrząc na `allowed-tools`, od razu wiesz czego skil potrzebuje, bez czytania całej treści.
-
-### Jak dobieramy narzędzia w tym projekcie
-
-**`compare-reports`** — porównuje dwa pliki Markdown i zapisuje wynik:
+**`compare-reports`** — porównuje pliki Markdown:
 ```yaml
 allowed-tools:
-  - Read    # czyta raporty z reports/
-  - Write   # zapisuje plik compare-*.md
-  - Bash    # listuje pliki w reports/ (ls)
+  - Read   # czyta raporty z reports/
+  - Write  # zapisuje compare-*.md
+  - Bash   # ls plików
 ```
-Playwright, WebFetch, Agent — niepotrzebne, więc wykluczone.
 
-**`audit-subpages`** — pobiera strony i uruchamia subagentów:
+**`audit-subpages`** — pobiera strony, uruchamia subagentów:
 ```yaml
 allowed-tools:
-  - Bash      # curl do pobierania stron
-  - WebFetch  # alternatywa dla curl
-  - Agent     # uruchamianie subagentów równolegle
-  - Write     # zapis raportu zbiorczego
+  - Bash      # curl
+  - WebFetch  # alternatywa
+  - Agent     # subagenci równolegle
+  - Write     # raport zbiorczy
 ```
-Read czy Edit kodu — niepotrzebne, więc wykluczone.
 
 ---
 
-## `model` — kiedy zmieniać model?
+## `model` — kiedy zmieniać
 
-Domyślnie skil używa aktualnego modelu sesji. Możesz to nadpisać.
+Domyślnie skil używa modelu sesji. Nadpisać warto gdy zadanie ma inne wymagania.
 
-**`compare-reports` używa `haiku`** — porównywanie tekstu to zadanie proste strukturalnie: wczytaj dwa pliki, zestawij wartości, zapisz tabelę. Nie wymaga zaawansowanego rozumowania. Haiku jest szybszy i tańszy, a jakość wyniku jest identyczna jak przy Sonnecie.
+- **`compare-reports` → `haiku`** — porównanie tekstu strukturalnie proste, Haiku szybszy i tańszy przy identycznej jakości
+- **`audit-subpages` → bez override** — subagenci działają równolegle, czas zależy od sieci, nie od modelu
 
-**`audit-subpages` nie definiuje modelu** — każdy subagent wykonuje kilka zapytań curl i parsuje HTML. Domyślny Sonnet wystarczy; subagenci i tak działają równolegle, więc czas wykonania zależy od sieci, nie od modelu.
-
-Ogólna zasada: prostą analizę tekstu i formatowanie → `haiku`; złożone rozumowanie, wieloetapowe planowanie → `sonnet` lub `opus`.
+Zasada: prosta analiza i formatowanie → `haiku`; złożone rozumowanie → `sonnet`/`opus`.
 
 ---
 
 ## Progressive Disclosure — skile wieloplikowe
 
-Gdy skil rośnie powyżej ~500 linii, rozbij go na wiele plików:
+Gdy skil rośnie powyżej ~500 linii, rozbij na wiele plików:
 
 ```
-.claude/skills/
-└── audit-subpages/
-    ├── SKILL.md                      ← główny plik (max ~500 linii)
-    └── references/
-        └── subagent-audit-prompt.md  ← ładowany tylko gdy potrzebny
+.claude/skills/audit-subpages/
+├── SKILL.md                       ← główny (max ~500 linii)
+└── references/
+    └── subagent-audit-prompt.md   ← ładowany tylko gdy potrzebny
 ```
 
-**Dlaczego to ważne:** Claude ładuje pliki pomocnicze *tylko gdy są potrzebne*, nie wszystko naraz. Dzięki temu okno kontekstu nie jest zapychane instrukcjami, które w danym momencie nie są używane.
+Claude ładuje pliki pomocnicze **tylko gdy są potrzebne** — okno kontekstu nie jest zapychane instrukcjami nieużywanymi. Skrypty w `scripts/`: do kontekstu trafia tylko wynik, nie cały kod.
 
-**Skrypty w `scripts/`:** jeśli skil używa skryptu bash lub Python, Claude uruchamia go i do kontekstu trafia tylko wynik — nie cały kod. To oszczędza tokeny.
-
-### Zastosowanie w tym projekcie
-
-`audit-subpages/SKILL.md` oryginalnie miał wbudowany cały prompt subagenta (42 linie JSON-a i instrukcji). Po refaktorze:
-
-- `audit-subpages/SKILL.md` odwołuje się do: `references/subagent-audit-prompt.md`
-- Prompt jest ładowany tylko w Kroku 2, gdy faktycznie uruchamiane są subagenty
-- Główny plik pozostaje czytelny i krótki
+W tym projekcie: `audit-subpages/SKILL.md` odwołuje się do `references/subagent-audit-prompt.md` — prompt subagenta ładowany dopiero w Kroku 2, gdy realnie uruchamiane są subagenty.
 
 ---
 
-## Struktura skili w tym projekcie
+## Struktura skili w projekcie
 
 ```
 .claude/skills/
 ├── audit-subpages/
-│   ├── SKILL.md                      # /audit-subpages — równoległy audyt podstron
-│   └── references/
-│       └── subagent-audit-prompt.md  # prompt przekazywany subagentom audytu
+│   ├── SKILL.md                      # /audit-subpages
+│   └── references/subagent-audit-prompt.md
 └── compare-reports/
-    └── SKILL.md                      # /compare-reports — porównanie dwóch raportów SEO
+    └── SKILL.md                      # /compare-reports
 ```
 
 | Komenda | Model | Narzędzia | Zastosowanie |
-|---------|-------|-----------|--------------|
-| `/audit-subpages` | domyślny (Sonnet) | Bash, WebFetch, Agent, Write | Audyt wielu podstron równolegle |
+|---|---|---|---|
+| `/audit-subpages` | Sonnet | Bash, WebFetch, Agent, Write | Audyt wielu podstron równolegle |
 | `/compare-reports` | haiku | Read, Write, Bash | Porównanie dwóch raportów SEO |
