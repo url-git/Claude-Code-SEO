@@ -155,6 +155,28 @@ Alternatywy:
 
 ---
 
+## Wbudowany agent dokumentacyjny: `claude-code-guide`
+
+Claude Code ma wbudowanego agenta `claude-code-guide`, który działa jako dedykowany specjalista od dokumentacji Claude Code. Wywołujesz go przez `@claude-code-guide` — oddzielna sesja, nie zaśmieca głównego kontekstu.
+
+**Kiedy używać:**
+- Nie rozumiesz jakiejś funkcji Claude Code (hooki, MCP, skile, agenci, uprawnienia)
+- Chcesz sprawdzić jak coś skonfigurować bez szukania w dokumentacji
+- Potrzebujesz porównania mechanizmów (np. skil vs komenda vs agent)
+
+**Czym różni się od agenta `pytanie` w tym projekcie:**
+
+| | `@claude-code-guide` | `@pytanie` |
+|---|---|---|
+| Typ | Wbudowany (Anthropic) | Custom (ten projekt) |
+| Zasięg | Każda sesja CC | Tylko ten projekt |
+| Fokus | Claude Code + Claude API | Claude Code + kontekst ntfy.pl |
+| Pamięć | Brak | `.claude/agent-memory/pytanie/` |
+
+W praktyce `@pytanie` jest lepiej dopasowany do tego projektu — zna CLAUDE.md, skile i kontekst ntfy.pl. `@claude-code-guide` przydaje się jako "drugi głos" gdy potrzebujesz odpowiedzi niezależnej od kontekstu projektu.
+
+---
+
 ## Podsumowanie
 
 ```
