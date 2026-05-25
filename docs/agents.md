@@ -8,9 +8,11 @@ Plik Markdown w `.claude/agents/`, który definiuje **własny system prompt** dl
 
 | Mechanizm | Lokalizacja | System prompt | Narzędzia | Model | Pamięć |
 |---|---|---|---|---|---|
-| **Komenda** `/seo-audit` | `.claude/commands/` | Domyślny CC | Brak ograniczeń | Sesji | Nie |
-| **Skil** `/audit-subpages` | `.claude/skills/*/SKILL.md` | Domyślny CC | Allowed-tools | Konfigurowalny | Nie |
-| **Agent** `@seo-specialist` | `.claude/agents/` | **Własny** + domyślny CC | Tools (allow/deny) | Konfigurowalny | **Tak** |
+| **Komenda** `/seo-audit` | `.claude/commands/` | Wbudowany CC¹ | Brak ograniczeń | Sesji | Nie |
+| **Skil** `/audit-subpages` | `.claude/skills/*/SKILL.md` | Wbudowany CC¹ | Allowed-tools | Konfigurowalny | Nie |
+| **Agent** `@seo-specialist` | `.claude/agents/` | **Własny body** + wbudowany CC¹ | Tools (allow/deny) | Konfigurowalny | **Tak** |
+
+¹ **Wbudowany CC** = system prompt zakodowany w aplikacji Claude Code (niewidoczny, niedytowalny). CLAUDE.md to *nie* system prompt — to project instructions doklejane jako dodatkowy kontekst.
 
 Agent = najpotężniejszy mechanizm: system prompt + ograniczenie narzędzi + wybór modelu + trwała pamięć.
 
