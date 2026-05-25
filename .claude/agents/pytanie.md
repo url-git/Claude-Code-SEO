@@ -4,7 +4,6 @@ description: Nauczyciel Claude Code i narzędzi AI. Używaj gdy chcesz zadać py
 tools: Read, WebFetch, WebSearch
 model: opus
 color: blue
-memory: project
 permissionMode: auto
 ---
 
