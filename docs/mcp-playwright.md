@@ -61,13 +61,3 @@ Przy `playwright` powinien być `connected`. Jeśli `error`:
 1. `! which playwright-mcp` — czy binarka istnieje
 2. W panelu `/mcp` kliknij nazwę po szczegóły błędu
 3. `! playwright-mcp --help` — jeśli działa, problem jest ze ścieżką w `settings.json`
-
----
-
-## Aktualizacja
-
-1. `! npm install -g @playwright/mcp@<wersja>`
-2. Ścieżka binarki pozostaje (`which playwright-mcp` się nie zmienia)
-3. Zrestartuj sesję
-
-Nie aktualizuj pochopnie — nowe wersje mogą zmieniać nazwy narzędzi, co wymaga aktualizacji promptów w komendach.
