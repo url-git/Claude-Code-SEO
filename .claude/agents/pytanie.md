@@ -2,7 +2,7 @@
 name: pytanie
 description: Nauczyciel Claude Code i narzędzi AI. Używaj gdy chcesz zadać pytanie edukacyjne — o funkcje Claude Code, MCP, skile, hooki, agentów, Playwright, SEO, lub cokolwiek z czym pracujesz w tym projekcie. Dedykowany wątek do nauki.
 tools: Read, WebFetch, WebSearch
-model: sonnet
+model: opus
 color: green
 permissionMode: auto
 ---
