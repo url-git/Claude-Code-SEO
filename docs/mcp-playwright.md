@@ -6,7 +6,7 @@ MCP (Model Context Protocol) to mechanizm, który pozwala Claude Code łączyć 
 
 ## Jak działa w praktyce
 
-Przy starcie sesji Claude Code czyta `.claude/settings.json` i uruchamia zdefiniowane serwery MCP jako oddzielne procesy. Playwright MCP odpala instancję przeglądarki i wystawia narzędzia:
+Przy starcie sesji Claude Code czyta `.mcp.json` (lub `.claude/settings.json`) i uruchamia zdefiniowane serwery MCP jako oddzielne procesy. Playwright MCP odpala instancję przeglądarki i wystawia narzędzia:
 
 | Narzędzie MCP | Co robi |
 |---|---|
@@ -22,7 +22,7 @@ Claude widzi je tak samo jak `Read` czy `Bash` — wywołuje w dowolnym momencie
 
 ## Konfiguracja
 
-`.claude/settings.json`:
+`.mcp.json` (zalecane — dedykowany plik dla MCP):
 
 ```json
 {
@@ -34,11 +34,13 @@ Claude widzi je tak samo jak `Read` czy `Bash` — wywołuje w dowolnym momencie
 }
 ```
 
+Alternatywnie można umieścić `mcpServers` w `.claude/settings.json` — oba formaty działają, ale `.mcp.json` jest dedykowanym miejscem na konfigurację MCP i nie miesza jej z uprawnieniami czy hookami.
+
 Instalacja: `npm install -g @playwright/mcp@0.0.75`. Ścieżkę binarki znajdziesz przez `which playwright-mcp`.
 
 ### Globalna instalacja npm ≠ globalny MCP
 
-`npm install -g` instaluje binarkę systemowo, ale Claude Code ładuje serwery MCP **wyłącznie z `.claude/settings.json` danego projektu**. Inny projekt na tym samym komputerze nie uruchomi Playwright MCP, dopóki nie ma go w swoim `settings.json`. Globalna instalacja to tylko sposób na szybki dostęp do binarki (zamiast czekać na `npx`).
+`npm install -g` instaluje binarkę systemowo, ale Claude Code ładuje serwery MCP **z `.mcp.json` lub `.claude/settings.json` danego projektu**. Inny projekt na tym samym komputerze nie uruchomi Playwright MCP, dopóki nie ma go w swoim pliku konfiguracyjnym. Globalna instalacja to tylko sposób na szybki dostęp do binarki (zamiast czekać na `npx`).
 
 ---
 
