@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "/Users/p/.nvm/versions/node/v24.11.0/bin/playwright-mcp"
+    }
+  }
+}
